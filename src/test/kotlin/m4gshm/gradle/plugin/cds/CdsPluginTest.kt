@@ -3,7 +3,6 @@ package m4gshm.gradle.plugin.cds
 
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Test
-import org.springframework.boot.gradle.tasks.bundling.BootJar
 import kotlin.test.assertEquals
 
 
@@ -17,6 +16,6 @@ class CdsPluginTest {
         val generateClassesList = project.tasks.getByName("generateClassesList") as GenerateClassesList
         assertEquals("classes.txt", generateClassesList.outputFileName.get())
         val outputFile = generateClassesList.outputFile
-        assertEquals("classes.txt",  outputFile.get().asFile.name)
+        assertEquals("classes.txt", outputFile.get().asFile.name)
     }
 }

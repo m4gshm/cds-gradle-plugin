@@ -7,6 +7,7 @@ import org.gradle.api.tasks.*
 
 abstract class GenerateClassesList : JavaExec() {
 
+    @Internal
     var logLevel = DEBUG
 
     @get:Input
@@ -18,9 +19,11 @@ abstract class GenerateClassesList : JavaExec() {
     @get:Input
     var runnerJar = "dry-runner.jar"
 
+    @Internal
     val outputFileName: Property<String> = objectFactory.property(String::class.java).value("classes.txt")
+    @Internal
     val outputDirName: Property<String> = objectFactory.property(String::class.java).value("cds")
-
+    @Internal
     val outputDirectory = objectFactory.directoryProperty().value(project.layout.buildDirectory.dir(outputDirName))
 
     @get:OutputFile
