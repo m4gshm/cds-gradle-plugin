@@ -6,7 +6,7 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.logging.LogLevel.DEBUG
 
-abstract class BaseCdsTask : JavaExec() {
+abstract class BaseGeneratingTask : JavaExec() {
     @Internal
     var logLevel = DEBUG
 

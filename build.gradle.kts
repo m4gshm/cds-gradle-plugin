@@ -1,11 +1,14 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "m4gshm"
-version = "0.1-SNAPSHOT"
+version = "0.0.1-SNAPSHOT"
 
 plugins {
     kotlin("jvm") version "1.4.20"
     `java-gradle-plugin`
+
+    `maven-publish`
+    id("com.gradle.plugin-publish") version "0.14.0"
 }
 
 repositories {
@@ -14,7 +17,7 @@ repositories {
 
 val dryRunner = ":dry-runner"
 dependencies {
-    implementation(project(dryRunner))
+    compileOnly(project(dryRunner))
     compileOnly(gradleApi())
 
     testImplementation(kotlin("test"))
@@ -45,7 +48,23 @@ gradlePlugin {
     plugins {
         create("cds-gradle-plugin") {
             id = "m4gshm.gradle.plugin.cds"
+            displayName = "CDS gradle plugin"
+            description = "Shared classes dump generating helper"
             implementationClass = "m4gshm.gradle.plugin.cds.CdsPlugin"
+        }
+    }
+}
+
+pluginBundle {
+    vcsUrl = "https://github.com/m4gshm/cds-gradle-plugin"
+    tags = listOf("cds")
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "localPlugins"
+            url = uri("${System.getProperty("user.home")}/gradle-plugin-repository")
         }
     }
 }

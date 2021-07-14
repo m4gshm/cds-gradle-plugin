@@ -1,11 +1,13 @@
 package m4gshm.gradle.plugin.cds
 
 import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.classesListFileName
+import m4gshm.gradle.plugin.cds.CdsPlugin.Plugins.sharedClassesJar
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 
 
-abstract class SharedClassesList : BaseCdsTask() {
+abstract class SharedClassesList : BaseGeneratingTask() {
 
     @get:Input
     var useSourceSetClassPath = true
@@ -14,7 +16,8 @@ abstract class SharedClassesList : BaseCdsTask() {
     var sourceSetName = "main"
 
     @get:Input
-    lateinit var dryRunMainClass: String
+    val dryRunMainClass: Property<String> = objectFactory.property(String::class.java)
+        .value(project.extensions.getByType(CdsExtension::class.java).mainClass)
 
     @get:Input
     var runnerJar = "dry-runner.jar"
@@ -23,18 +26,15 @@ abstract class SharedClassesList : BaseCdsTask() {
     val outputFileName: Property<String> = objectFactory.property(String::class.java).value(classesListFileName)
 
     @get:OutputFile
-    val outputFile = objectFactory.fileProperty().value(buildDirectory.file(outputFileName))
+    val outputFile: RegularFileProperty = objectFactory.fileProperty().value(buildDirectory.file(outputFileName))
 
     init {
         group = CdsPlugin.group
         isIgnoreExitValue = true
-
         mainClass.set("m4gshm.DryRunner")
-
-        val jarTask = project.tasks.findByPath("jar")
-        val bootJarTask = project.tasks.findByPath("bootJar")
-        if (bootJarTask != null) dependsOn(bootJarTask)
-        else if (jarTask != null) dependsOn(jarTask)
+        val sharedClassesJar = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
+        dryRunMainClass.set(sharedClassesJar.mainClass)
+        dependsOn(sharedClassesJar)
     }
 
     @TaskAction
@@ -66,6 +66,7 @@ abstract class SharedClassesList : BaseCdsTask() {
 
         classpath += project.files(outRunnerJar)
 
+        val dryRunMainClass = dryRunMainClass.get()
         logger.log(logLevel, "dry run main class $dryRunMainClass, runner class ${mainClass.get()}")
 
         val runnerArgs = listOf(dryRunMainClass) + (args ?: emptyList())

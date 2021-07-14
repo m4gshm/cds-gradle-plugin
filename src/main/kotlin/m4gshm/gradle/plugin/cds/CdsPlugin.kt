@@ -12,17 +12,23 @@ class CdsPlugin : Plugin<Project> {
         const val sharedClassesFileName = "shared.jsa"
         const val buildDirName = "cds"
         const val group = "cds"
+        const val extension = "cds"
         const val pluginId = "m4gshm.gradle.plugin.cds"
     }
 
     enum class Plugins(val pluginClass: Class<out Task>) {
         sharedClassesList(SharedClassesList::class.java),
-        sharedClassesDump(SharedClassesDump::class.java);
+        sharedClassesDump(SharedClassesDump::class.java),
+        sharedClassesJar(SharedClassesJar::class.java),
+        runSharedClassesJar(RunSharedClassesJar::class.java),
+        ;
 
         val taskName = this.name
     }
 
     override fun apply(project: Project) {
+        project.extensions.create(extension, CdsExtension::class.java)
+
         Plugins.values().forEach {
             project.tasks.register(it.taskName, it.pluginClass)
         }
