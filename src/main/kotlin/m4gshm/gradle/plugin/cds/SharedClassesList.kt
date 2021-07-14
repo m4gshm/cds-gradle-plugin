@@ -1,36 +1,33 @@
 package m4gshm.gradle.plugin.cds
 
-import org.gradle.api.logging.LogLevel.DEBUG
+import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.classesListFileName
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 
 
-abstract class GenerateClassesList : JavaExec() {
-
-    @Internal
-    var logLevel = DEBUG
+abstract class SharedClassesList : BaseCdsTask() {
 
     @get:Input
     var useSourceSetClassPath = true
+
     @get:Input
     var sourceSetName = "main"
+
     @get:Input
     lateinit var dryRunMainClass: String
+
     @get:Input
     var runnerJar = "dry-runner.jar"
 
     @Internal
-    val outputFileName: Property<String> = objectFactory.property(String::class.java).value("classes.txt")
-    @Internal
-    val outputDirName: Property<String> = objectFactory.property(String::class.java).value("cds")
-    @Internal
-    val outputDirectory = objectFactory.directoryProperty().value(project.layout.buildDirectory.dir(outputDirName))
+    val outputFileName: Property<String> = objectFactory.property(String::class.java).value(classesListFileName)
 
     @get:OutputFile
-    val outputFile = objectFactory.fileProperty().value(outputDirectory.file(outputFileName))
+    val outputFile = objectFactory.fileProperty().value(buildDirectory.file(outputFileName))
 
     init {
-        group = "build"
+        group = CdsPlugin.group
+        isIgnoreExitValue = true
 
         mainClass.set("m4gshm.DryRunner")
 
@@ -61,7 +58,7 @@ abstract class GenerateClassesList : JavaExec() {
 
         logger.log(logLevel, "runner url $resource")
 
-        val outDir = this.outputDirectory.get()
+        val outDir = this.buildDirectory.get()
         val outRunnerJar = outDir.file(runnerJar).asFile
 
         logger.log(logLevel, "copying runner to $outRunnerJar")
@@ -74,7 +71,7 @@ abstract class GenerateClassesList : JavaExec() {
         val runnerArgs = listOf(dryRunMainClass) + (args ?: emptyList())
         args = runnerArgs
         val outputFile = outputFile.get().asFile
-        logger.log(logLevel, "output File $outputFile")
+        logger.log(logLevel, "output file $outputFile")
 
         jvmArgs(
             "-Xshare:off",
