@@ -4,30 +4,24 @@
 ````kotlin
 val appMainClassName = "app.Main"
 
-tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesDump>("sharedClassesDump") {
-    classpath = files(tasks.getByName<Jar>("jar").archiveFile)
-}
+tasks.create<Jar>("sharedClassesJar") {
+    dependsOn("build")
+    group = "cds"
+    destinationDirectory.set(file("$buildDir/cds/jar"))
 
-tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesList>("sharedClassesList") {
-    dependsOn("jar")
-    dryRunMainClass = appMainClassName
-}
+    val jarTask = tasks.getByName<Jar>("jar")
+    with(jarTask)
+    inputs.files(jarTask.inputs.files)
 
-tasks.jar {
-    project.subprojects.forEach { subProject ->
-        val subJar = subProject.tasks.findByName("jar")
-        if (subJar != null) {
-            dependsOn(subJar)
-        }
-    }
-
-    val jarDir = this.archiveFile.get().asFile.parentFile
+    val jarFile = this.archiveFile.get().asFile
+    project.logger.warn("jarFile $jarFile")
+    val jarDir = jarFile.parentFile
     doFirst {
         val libsDirName = "lib"
         val absoluteLibsDir = jarDir.toPath().resolve(libsDirName).toFile()
         absoluteLibsDir.mkdirs()
         val classpath = project.configurations["runtimeClasspath"].files
-        classpath.forEach { it ->
+        classpath.forEach {
             val target = File(absoluteLibsDir, it.name)
             project.logger.info("copy $it -> $target")
             it.copyTo(target, true)
@@ -44,18 +38,37 @@ tasks.jar {
 }
 
 tasks.create<JavaExec>("runJarShareOn") {
-    val sharedClassesDump = tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesDump>("sharedClassesDump")
-    dependsOn(sharedClassesDump)
+    val sharedClassesDumpTask = tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesDump>("sharedClassesDump")
+    val sharedClassesJarTask = tasks.getByName<Jar>("sharedClassesJar")
+    dependsOn(sharedClassesDumpTask)
     group = "application"
     classpath = files()
     mainClass.set("")
     doFirst {
-        val sharedClassesFile = sharedClassesDump.outputFile.asFile.get()
+        val sharedClassesFile = sharedClassesDumpTask.outputFile.asFile.get()
         jvmArgs(
             "-Xshare:on",
             "-XX:SharedArchiveFile=$sharedClassesFile",
-            "-jar", tasks.getByName<Jar>("jar").archiveFile.get().asFile.absolutePath
+            "-jar", sharedClassesJarTask.archiveFile.get().asFile.absolutePath
         )
     }
 }
+
+tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesDump>("sharedClassesDump") {
+    val jar = tasks.getByName<Jar>("sharedClassesJar").archiveFile
+    classpath = files(jar)
+    inputs.file(jar)
+}
+
+tasks.getByName<m4gshm.gradle.plugin.cds.SharedClassesList>("sharedClassesList") {
+    dependsOn("sharedClassesJar")
+    dryRunMainClass = appMainClassName
+}
+
+````
+
+replace ```appMainClassName``` value by yours main class name and run next command:
+
+````bash
+./gradlew runJarShareOn
 ````
