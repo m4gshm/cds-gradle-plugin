@@ -17,12 +17,14 @@ class CdsPlugin : Plugin<Project> {
 
     enum class Plugins(val pluginClass: Class<out Task>) {
         sharedClassesList(SharedClassesList::class.java),
-        sharedClassesDump(SharedClassesDump::class.java)
+        sharedClassesDump(SharedClassesDump::class.java);
+
+        val taskName = this.name
     }
 
     override fun apply(project: Project) {
         Plugins.values().forEach {
-            project.tasks.register(it.name, it.pluginClass)
+            project.tasks.register(it.taskName, it.pluginClass)
         }
     }
 }

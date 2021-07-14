@@ -15,14 +15,14 @@ import kotlin.test.assertEquals
 class CdsPluginTest {
     @Test
     fun testGenerateClassesListFileName() {
-        val task = project().tasks.getByName(sharedClassesList.name) as SharedClassesList
+        val task = project().tasks.getByName(sharedClassesList.taskName) as SharedClassesList
         assertEquals(classesListFileName, task.outputFileName.get())
         assertEquals(classesListFileName, task.outputFile.get().asFile.name)
     }
 
     @Test
     fun testSharedClassesFileName() {
-        val task = project().tasks.getByName(sharedClassesDump.name) as SharedClassesDump
+        val task = project().tasks.getByName(sharedClassesDump.taskName) as SharedClassesDump
         assertEquals(sharedClassesFileName, task.outputFileName.get())
         assertEquals(sharedClassesFileName, task.outputFile.get().asFile.name)
     }
