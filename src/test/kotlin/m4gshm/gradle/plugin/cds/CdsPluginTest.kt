@@ -31,7 +31,7 @@ class CdsPluginTest {
 
     @Test
     fun sharedClassesJarName() {
-        val project = project(JavaPlugin::class.java)
+        val project = project()
 
         val task = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
         val archiveFile = task.archiveFile.get().asFile.toPath()
@@ -46,6 +46,7 @@ class CdsPluginTest {
     private fun project(vararg plugins: Class<out Plugin<*>>): Project {
         val project = ProjectBuilder.builder().build()
         val pluginManager = project.pluginManager
+        pluginManager.apply(JavaPlugin::class.java)
         pluginManager.apply(pluginId)
         plugins.forEach { pluginManager.apply(it) }
         return project
