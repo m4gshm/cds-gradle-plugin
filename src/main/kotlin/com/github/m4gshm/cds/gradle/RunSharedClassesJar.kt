@@ -1,7 +1,7 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
-import m4gshm.gradle.plugin.cds.CdsPlugin.Plugins.sharedClassesDump
-import m4gshm.gradle.plugin.cds.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesDump
+import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input

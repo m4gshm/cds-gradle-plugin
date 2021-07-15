@@ -1,6 +1,6 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
-import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.buildDirName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.buildDirName
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal

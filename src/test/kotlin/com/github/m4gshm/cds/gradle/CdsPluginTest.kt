@@ -1,10 +1,10 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
 
-import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.classesListFileName
-import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.pluginId
-import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.sharedClassesFileName
-import m4gshm.gradle.plugin.cds.CdsPlugin.Plugins.*
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.pluginId
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.sharedClassesFileName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPlugin

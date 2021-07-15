@@ -1,7 +1,7 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
-import m4gshm.gradle.plugin.cds.CdsPlugin.Companion.classesListFileName
-import m4gshm.gradle.plugin.cds.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*

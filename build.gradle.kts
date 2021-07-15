@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-group = "m4gshm"
+group = "com.github.m4gshm.cds.gradle"
 version = "0.0.1"
 
 plugins {
@@ -47,10 +47,10 @@ tasks.withType<JavaCompile> {
 gradlePlugin {
     plugins {
         create("cds-gradle-plugin") {
-            id = "m4gshm.gradle.plugin.cds"
-            displayName = "CDS gradle plugin"
-            description = "Shared classes dump generating helper"
-            implementationClass = "m4gshm.gradle.plugin.cds.CdsPlugin"
+            id = "com.github.m4gshm.cds"
+            displayName = "Class Data Sharing (CDS) gradle plugin"
+            description = "helper for generating and using shared classes archive in your applications."
+            implementationClass = "com.github.m4gshm.cds.gradle.CdsPlugin"
         }
     }
 }
@@ -58,7 +58,7 @@ gradlePlugin {
 pluginBundle {
     website = "https://github.com/m4gshm/cds-gradle-plugin"
     vcsUrl = "https://github.com/m4gshm/cds-gradle-plugin"
-    tags = listOf("cds")
+    tags = listOf("cds", "jsa")
 }
 
 publishing {

@@ -1,4 +1,4 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
 import org.gradle.api.provider.Property
 

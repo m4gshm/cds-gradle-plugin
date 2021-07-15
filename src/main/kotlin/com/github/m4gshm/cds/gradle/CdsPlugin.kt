@@ -1,4 +1,4 @@
-package m4gshm.gradle.plugin.cds
+package com.github.m4gshm.cds.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -13,7 +13,7 @@ class CdsPlugin : Plugin<Project> {
         const val buildDirName = "cds"
         const val group = "cds"
         const val extension = "cds"
-        const val pluginId = "m4gshm.gradle.plugin.cds"
+        const val pluginId = "com.github.m4gshm.cds"
     }
 
     enum class Plugins(val pluginClass: Class<out Task>) {

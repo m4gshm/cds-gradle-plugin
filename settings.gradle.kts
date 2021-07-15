@@ -1,4 +1,3 @@
-
 rootProject.name = "cds-gradle-plugin"
 val dryRunner = "dry-runner"
 include(":$dryRunner")

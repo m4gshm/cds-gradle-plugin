@@ -6,7 +6,7 @@
 
 ````kotlin
 plugins {
-    id("m4gshm.gradle.plugin.cds") version "0.0.1"
+    id("com.github.m4gshm.cds") version "0.0.1"
 }
 
 cds {
