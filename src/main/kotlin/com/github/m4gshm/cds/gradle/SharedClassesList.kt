@@ -3,8 +3,10 @@ package com.github.m4gshm.cds.gradle
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
+import java.io.BufferedWriter
 
 
 abstract class SharedClassesList : BaseGeneratingTask() {
@@ -22,6 +24,17 @@ abstract class SharedClassesList : BaseGeneratingTask() {
     @get:Input
     var runnerJar = "dry-runner.jar"
 
+    @get:Input
+    var dryRunnerClass = "m4gshm.DryRunner"
+
+    @get:Input
+    val classesListExcludes: ListProperty<Regex> = objectFactory.listProperty(Regex::class.java).value(
+        listOf(
+            dryRunnerClass.replace(".", "/").toRegex(),
+            ".+\\\$Proxy(\\d+)\$".toRegex()
+        )
+    )
+
     @Internal
     val outputFileName: Property<String> = objectFactory.property(String::class.java).value(classesListFileName)
 
@@ -31,7 +44,7 @@ abstract class SharedClassesList : BaseGeneratingTask() {
     init {
         group = CdsPlugin.group
         isIgnoreExitValue = true
-        mainClass.set("m4gshm.DryRunner")
+        mainClass.set(dryRunnerClass)
         val sharedClassesJar = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
         dryRunMainClass.set(sharedClassesJar.mainClass)
         dependsOn(sharedClassesJar)
@@ -80,5 +93,25 @@ abstract class SharedClassesList : BaseGeneratingTask() {
         )
 
         super.exec()
+
+        if (outputFile.exists()) {
+            val excludes = classesListExcludes.get()
+            val classes = outputFile.readLines()
+            val filteredClasses = classes.filter { className ->
+                val exclude = excludes.firstOrNull { excludeFilter -> excludeFilter.matches(className) } != null
+                if (exclude) logger.log(logLevel, "exclude class $className")
+                !exclude
+            }
+
+            logger.log(logLevel, "class amount before filtering ${classes.size} and after ${filteredClasses.size}")
+
+            BufferedWriter(outputFile.writer()).use { writer ->
+                filteredClasses.forEach { className ->
+                    writer.write(className)
+                    writer.newLine()
+                }
+            }
+        } else logger.error("filtering error: $outputFile doesn't exists")
+
     }
 }

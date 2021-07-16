@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "com.github.m4gshm.cds.gradle"
-version = "0.0.1"
+version = "0.0.2-SNAPSHOT"
 
 plugins {
     kotlin("jvm") version "1.4.20"
