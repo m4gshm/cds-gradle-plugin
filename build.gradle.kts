@@ -19,6 +19,8 @@ val dryRunner = ":dry-runner"
 dependencies {
     compileOnly(project(dryRunner))
     compileOnly(gradleApi())
+    compileOnly("org.springframework.boot:spring-boot-gradle-plugin:2.3.10.RELEASE")
+
 
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")

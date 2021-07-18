@@ -1,11 +1,13 @@
 package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.buildDirName
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.bundling.Jar
 import java.io.File
 
 abstract class SharedClassesJar : Jar() {
@@ -15,8 +17,13 @@ abstract class SharedClassesJar : Jar() {
     @Internal
     var baseJakTaskName = "jar"
 
-    @Input
+    @Internal
     var libsDirName = "lib"
+
+    @OutputDirectory
+    val libsDir: DirectoryProperty = project.objects.directoryProperty().fileProvider(archiveFile.map {
+        it.asFile.parentFile.toPath().resolve(libsDirName).toFile()
+    })
 
     @Input
     var dependenciesConfigurationName = "runtimeClasspath"
@@ -38,14 +45,11 @@ abstract class SharedClassesJar : Jar() {
 
     @TaskAction
     override fun copy() {
-        val jarFile = archiveFile.get().asFile
-        val jarDir = jarFile.parentFile
-
-        val absoluteLibsDir = jarDir.toPath().resolve(libsDirName).toFile()
-        absoluteLibsDir.mkdirs()
+        val libsDir = libsDir.get().asFile
+        libsDir.mkdirs()
         val classpath = project.configurations.getByName(dependenciesConfigurationName).files
         classpath.forEach {
-            val target = File(absoluteLibsDir, it.name)
+            val target = File(libsDir, it.name)
             project.logger.log(logLevel, "copy $it -> $target")
             it.copyTo(target, true)
         }

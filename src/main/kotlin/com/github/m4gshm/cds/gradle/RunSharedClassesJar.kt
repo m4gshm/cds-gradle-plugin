@@ -2,12 +2,9 @@ package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesDump
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
-import org.gradle.api.logging.LogLevel
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 
 abstract class RunSharedClassesJar : JavaExec() {
@@ -18,29 +15,37 @@ abstract class RunSharedClassesJar : JavaExec() {
     }
 
     @Internal
-    var logLevel = LogLevel.DEBUG
+    var logLevel = project.extensions.getByType(CdsExtension::class.java).logLevel
 
     @Input
-    val share: Property<Share> = objectFactory.property(Share::class.java).value(Share.on)
+    val share: Property<Share> = objectFactory.property(Share::class.java).convention(Share.on)
 
     private val sharedClassesDumpTask = project.tasks.getByName(sharedClassesDump.taskName) as SharedClassesDump
+
+    @InputFile
+    val sharedArchiveFile: RegularFileProperty = objectFactory.fileProperty().convention(
+        sharedClassesDumpTask.sharedArchiveFile
+    )
+
     private val sharedClassesJarTask = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
 
+    @InputFile
+    val jar: RegularFileProperty = objectFactory.fileProperty().convention(sharedClassesJarTask.archiveFile)
+
     init {
-        dependsOn(sharedClassesDumpTask)
         group = "application"
         classpath = project.files()
-        mainClass.set("")
+        mainClass.convention("")
     }
 
     @TaskAction
     override fun exec() {
-        val sharedClassesFile = sharedClassesDumpTask.outputFile.asFile.get()
-
+        val sharedArchiveFile = sharedArchiveFile.get().asFile
+        logger.log(logLevel, "shared archive file $sharedArchiveFile")
         jvmArgs(
             share.get().value,
-            "-XX:SharedArchiveFile=$sharedClassesFile",
-            "-jar", sharedClassesJarTask.archiveFile.get().asFile.absolutePath
+            "-XX:SharedArchiveFile=$sharedArchiveFile",
+            "-jar", jar.get().asFile.absolutePath
         )
         super.exec()
     }

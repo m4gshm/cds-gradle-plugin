@@ -18,15 +18,13 @@ class CdsPluginTest {
     @Test
     fun testGenerateClassesListFileName() {
         val task = project().tasks.getByName(sharedClassesList.taskName) as SharedClassesList
-        assertEquals(classesListFileName, task.outputFileName.get())
         assertEquals(classesListFileName, task.outputFile.get().asFile.name)
     }
 
     @Test
     fun testSharedClassesFileName() {
         val task = project().tasks.getByName(sharedClassesDump.taskName) as SharedClassesDump
-        assertEquals(sharedClassesFileName, task.outputFileName.get())
-        assertEquals(sharedClassesFileName, task.outputFile.get().asFile.name)
+        assertEquals(sharedClassesFileName, task.sharedArchiveFile.get().asFile.name)
     }
 
     @Test
@@ -42,6 +40,26 @@ class CdsPluginTest {
         val archiveDir = archivePath.subpath(0, 2)
         assertEquals(Paths.get(CdsPlugin.buildDirName, "jar"), archiveDir)
     }
+
+    @Test
+    fun testRunSharedClassesJarFileName() {
+        val task = project().tasks.getByName(runSharedClassesJar.taskName) as RunSharedClassesJar
+        assertEquals(sharedClassesFileName, task.sharedArchiveFile.get().asFile.name)
+    }
+
+
+//    @Test
+//    fun sharedClassesDynamicDumpMainClassName() {
+//        val project = project()
+//
+//        val task = project.tasks.getByName(sharedClassesDynamicDump.taskName) as SharedClassesDynamicDump
+//        val jar = project.tasks.getByName("jar") as Jar
+//        jar.manifest.attributes["Main-Class"] = "app.Main"
+//        task.jar.set(jar.archiveFile.get().asFile)
+//        val dryRunMainClass = task.dryRunMainClass
+//        val dryRunMainClassName = dryRunMainClass.get()
+//        assertEquals("app.Main", dryRunMainClassName)
+//    }
 
     private fun project(vararg plugins: Class<out Plugin<*>>): Project {
         val project = ProjectBuilder.builder().build()

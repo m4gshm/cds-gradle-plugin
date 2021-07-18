@@ -21,8 +21,10 @@ public class DryRunner {
 
         try {
             mainMethod.invoke(null, new Object[]{mainArgs});
-        } finally {
-            exit(0);
+        } catch (InvocationTargetException | IllegalAccessException e) {
+            throw e;
+        } catch (Exception ignored) {
         }
+        exit(0);
     }
 }
