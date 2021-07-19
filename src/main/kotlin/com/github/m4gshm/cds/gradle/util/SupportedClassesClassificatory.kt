@@ -36,15 +36,13 @@ class SupportedClassesClassificatory(
             }
         }.flatten().forEach { it.handle(unsupported, unhandled) }
 
-        val unsupportedIt = unhandled.iterator()
-        while (unsupportedIt.hasNext()) {
-            val (className, children) = unsupportedIt.next()
-            if (unsupported.contains(className)) {
-                //todo logging
-                unsupported.addAll(children)
-                unsupportedIt.remove()
+        var onCheckUnsupported: Collection<String> = unsupported
+        do {
+            onCheckUnsupported = onCheckUnsupported.flatMap { unsupportedClass ->
+                unhandled.remove(unsupportedClass) ?: emptyList()
             }
-        }
+            unsupported.addAll(onCheckUnsupported)
+        } while (!onCheckUnsupported.isEmpty())
 
         val supported = LinkedHashSet<String>()
         val supportedIt = unhandled.iterator()
@@ -67,10 +65,7 @@ class SupportedClassesClassificatory(
         jarFile.entries().toList().filter { jarEntry ->
             val name = jarEntry.name
             !jarEntry.isDirectory && name.endsWith(classFileEnd) && name != dryRunnerClassPath + classFileEnd
-                    && /*todo: костыль */!name.endsWith("module-info.class")
-        }.map { jarEntry ->
-            classVersionSupportInfoService.getSupportInfo(jarFile, jarEntry)
-        }
+        }.map { jarEntry -> classVersionSupportInfoService.getSupportInfo(jarFile, jarEntry) }
     }
 
     private fun ClassSupportInfo.handle(
@@ -79,8 +74,8 @@ class SupportedClassesClassificatory(
     ) {
         when {
             !supported -> unsupported.add(classFilePath)
-            else -> parentClassNames.forEach { parent ->
-                unhandled.putIfAbsent(parent, LinkedHashSet())?.add(classFilePath)
+            else -> dependencies.forEach { parent ->
+                unhandled.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
             }
         }
     }
@@ -93,10 +88,5 @@ class SupportedClassesClassificatory(
             classFile.inputStream()
         )
     }.toList()
-
-    private fun classPath(it: File) = when (File.separator) {
-        "\\" -> it.path.replace(File.separator, "/")
-        else -> it.path
-    }
 
 }

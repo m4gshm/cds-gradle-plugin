@@ -74,6 +74,20 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
             dryRunnerClassPath, usedClasspathSources, logger, logLevel
         ).classify()
 
+//        File("supported.txt").bufferedWriter().use { writer ->
+//            supported.forEach {
+//                writer.write(it)
+//                writer.newLine()
+//            }
+//        }
+//
+//        File("unsupported.txt").bufferedWriter().use { writer ->
+//            unsupported.forEach {
+//                writer.write(it)
+//                writer.newLine()
+//            }
+//        }
+
         if (staticClassesList.get()) {
             outputFile.bufferedWriter().use { writer ->
                 supported.forEach {

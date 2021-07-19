@@ -1,6 +1,10 @@
 package com.github.m4gshm.cds.gradle.util
 
+import com.sun.org.apache.bcel.internal.classfile.ClassFormatException
 import com.sun.org.apache.bcel.internal.classfile.ClassParser
+import com.sun.org.apache.bcel.internal.generic.ArrayType
+import com.sun.org.apache.bcel.internal.generic.ObjectType
+import com.sun.org.apache.bcel.internal.generic.Type
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import java.io.InputStream
@@ -20,19 +24,36 @@ class ClassVersionSupportInfoService(
         jarEntry.name, jarFile.getInputStream(jarEntry)
     )
 
-    data class ClassSupportInfo(val supported: Boolean, val classFilePath: String, val parentClassNames: List<String>)
+    data class ClassSupportInfo(val supported: Boolean, val classFilePath: String, val dependencies: Set<String>)
 
-    fun getSupportInfo(classFilePath: String, stream: InputStream) = stream.use {
-        val classInfo = parse(it, classFilePath)
-        val supported = classInfo.major > 49
-        val superclassName = classInfo.superclassName
-        val interfaces = classInfo.interfaceNames
-        val parentClassNames = (if (supported) when (superclassName) {
-            "java.lang.Object" -> listOf(*interfaces)
-            else -> listOf(superclassName, *interfaces)
-        } else emptyList<String>()).map { parentClassName -> parentClassName.replace(".", "/") }
+    fun getSupportInfo(classFilePath: String, stream: InputStream): ClassSupportInfo {
+        val classFilePathWithoutExtension = classFilePath.removeExtension()
+        return try {
+            val classInfo = parse(stream, classFilePath)
+            val supported = classInfo.major > 49
+            val superclassName = classInfo.superclassName
+            val interfaces = classInfo.interfaceNames
+            val fields = classInfo.fields.filter { it.isStatic || it.isFinal }
+                .mapNotNull { field -> getClassName(field.type) }.toSet()
+            val methods = classInfo.methods.filter { it.isStatic }
+                .flatMap { method -> listOf(method.returnType, *method.argumentTypes) }.toSet()
+                .mapNotNull { type -> getClassName(type) }
 
-        ClassSupportInfo(supported, classFilePath.removeExtension(), parentClassNames)
+            val dependencies = when {
+                supported -> hashSetOf<String>().apply {
+                    if (superclassName != "java.lang.Object") add(superclassName)
+                    addAll(interfaces)
+                    addAll(fields)
+                    addAll(methods)
+                }
+                else -> emptySet()
+            }.map { parentClassName -> parentClassName.replace(".", "/") }.toSet()
+
+            ClassSupportInfo(supported, classFilePathWithoutExtension, dependencies)
+        } catch (e: ClassFormatException) {
+            logger.error("error on class parsing, $classFilePath, ${e.message}")
+            ClassSupportInfo(true, classFilePathWithoutExtension, emptySet())
+        }
     }
 
 //    fun isSupportedClassFileVersion(
@@ -52,7 +73,16 @@ class ClassVersionSupportInfoService(
 //        false
 //    }
 
-    private fun parse(stream: InputStream, sourceFile: String) = ClassParser(stream, sourceFile).parse()
+
+    private fun getClassName(type: Type): String? = when (type) {
+        is ObjectType -> type.className
+        is ArrayType -> getClassName(type.elementType)
+        else -> null
+    }
+
+    private fun parse(stream: InputStream, sourceFile: String) = stream.use {
+        ClassParser(it, sourceFile).parse()
+    }
 
     private fun String.removeExtension(): String {
         val extensionIndex = length - indexOfLast { it == '.' }
