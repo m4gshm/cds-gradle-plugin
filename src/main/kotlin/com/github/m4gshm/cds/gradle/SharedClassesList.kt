@@ -2,11 +2,15 @@ package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.util.SupportedClassesClassificatory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import java.io.BufferedWriter
+import java.io.File
+import java.util.jar.JarFile
 
 
 abstract class SharedClassesList : BaseDryRunnerTask() {
@@ -51,11 +55,6 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     val outputFile: RegularFileProperty =
         objectFactory.fileProperty().convention(buildDirectory.file(classesListFileName))
 
-//    @get:Internal
-//    val loadLogFile: RegularFileProperty = objectFactory.fileProperty().convention(
-//        buildDirectory.file("class-load.log")
-//    )
-
     init {
         val sharedClassesJar = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
         dryRunMainClass.convention(sharedClassesJar.mainClass)
@@ -64,26 +63,27 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 
     @TaskAction
     override fun exec() {
-        initClassPath()
+        val usedClasspathSources = initClassPath()
 
         initRunner()
 
         val outputFile = outputFile.get().asFile
         logger.log(logLevel, "output file $outputFile")
 
-        val supportedClasses = SupportedClassesExtractor(
-            dryRunnerClassPath, classpath, logger, logLevel
-        ).extractSupportedClasses()
-        if (staticClassesList.get()) outputFile.bufferedWriter().use { writer ->
-            supportedClasses.forEach {
-                writer.write(it)
-                writer.newLine()
+        val (supported, unsupported) = SupportedClassesClassificatory(
+            dryRunnerClassPath, usedClasspathSources, logger, logLevel
+        ).classify()
+
+        if (staticClassesList.get()) {
+            outputFile.bufferedWriter().use { writer ->
+                supported.forEach {
+                    writer.write(it)
+                    writer.newLine()
+                }
             }
         } else {
-//            val logFile = loadLogFile.get().asFile
             jvmArgs(
                 "-Xshare:off",
-//                "-Xlog:class+load=info:file=$logFile:tags",
                 "-XX:DumpLoadedClassList=$outputFile"
             )
 
@@ -103,17 +103,26 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                             " and after ${filteredClasses.size}"
                 )
 
-                val before = filteredClasses.size
-//                if (logFile.exists()) filteredClasses = SupportedClassesByLogFilter(
-//                    logger, logLevel, logFile
-//                ).filterByLog(filteredClasses)
-//                else
-                filteredClasses = filteredClasses.filter { supportedClasses.contains(it) }
+                val beforeVersionFiltering = filteredClasses.size
+                filteredClasses = filteredClasses.filter { !unsupported.contains(it) }
 
                 logger.log(
-                    logLevel, "class amount before class version filtering $before" +
+                    logLevel, "class amount before class version filtering $beforeVersionFiltering" +
                             " and after ${filteredClasses.size}"
                 )
+
+//                val beforeFoundFiltering = filteredClasses.size
+//                filteredClasses = filteredClasses.filter {
+//                    val contains = supported.contains(it)
+//                    if (!contains) logger.log(
+//                        logLevel, "class is listed but not found in classpath $it"
+//                    )
+//                    contains
+//                }
+//                logger.log(
+//                    logLevel, "class amount before class found filtering $beforeFoundFiltering" +
+//                            " and after ${filteredClasses.size}"
+//                )
 
                 BufferedWriter(outputFile.writer()).use { writer ->
                     filteredClasses.forEach { className ->
@@ -125,8 +134,8 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         }
     }
 
-    private fun initClassPath() {
-        if (useSourceSetClassPath) {
+    private fun initClassPath(): FileCollection {
+        return if (useSourceSetClassPath) {
             val sourceSets = project.extensions.findByName("sourceSets")
             if (sourceSets is SourceSetContainer) {
                 val sourceSetName = this.sourceSetName
@@ -137,10 +146,17 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                     classpath = runtimeClasspath
                 } else logger.warn("$sourceSetName sourceSet is absent")
             } else logger.warn("sourceSets is absent")
+            classpath
         } else {
             val jarFile = jar.get().asFile
             logger.log(logLevel, "put jar file to classpath, $jarFile")
             classpath = project.files(jarFile)
+            val jarClassPath = JarFile(jarFile).manifest.mainAttributes.getValue("Class-Path")
+            if (jarClassPath != null) {
+                val parentFile = jarFile.parentFile
+                val libs = jarClassPath.split(" ").map { File(parentFile, it) }
+                classpath + project.files(libs)
+            } else classpath
         }
     }
 }
