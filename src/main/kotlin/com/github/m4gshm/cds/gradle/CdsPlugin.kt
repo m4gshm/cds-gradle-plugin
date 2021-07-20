@@ -1,5 +1,6 @@
 package com.github.m4gshm.cds.gradle
 
+import com.github.m4gshm.cds.gradle.util.ClassListOptions
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -31,8 +32,9 @@ class CdsPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         project.extensions.create(extension, CdsExtension::class.java).apply {
             logLevel = LogLevel.DEBUG
-            mainClass = project.objects.property(String::class.java)
-            staticClassesList = project.objects.property(Boolean::class.java).convention(false)
+            mainClass
+            staticClassList = false
+            classListOptions = ClassListOptions()
         }
 
         Plugins.values().forEach {

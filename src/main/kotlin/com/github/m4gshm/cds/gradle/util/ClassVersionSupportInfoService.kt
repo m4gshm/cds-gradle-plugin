@@ -8,12 +8,26 @@ import com.sun.org.apache.bcel.internal.generic.Type
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import java.io.InputStream
+import java.io.Serializable
 import java.util.jar.JarFile
 import java.util.zip.ZipEntry
 
+data class ClassListOptions(
+    var superclass: Boolean = true,
+    var interfaces: Boolean = true,
+    var fields: Boolean = true,
+    var onlyStaticFields: Boolean = false,
+    var onlyFinalFields: Boolean = true,
+    var methods: Boolean = true,
+    var onlyStaticMethods: Boolean = true,
+    var logSupportedClasses: Boolean = false,
+    var logUnsupportedClasses: Boolean = false,
+) : Serializable
+
 class ClassVersionSupportInfoService(
     private val logger: Logger,
-    private val logLevel: LogLevel
+    private val logLevel: LogLevel,
+    private val options: ClassListOptions
 ) {
 
     companion object {
@@ -24,7 +38,32 @@ class ClassVersionSupportInfoService(
         jarEntry.name, jarFile.getInputStream(jarEntry)
     )
 
-    data class ClassSupportInfo(val supported: Boolean, val classFilePath: String, val dependencies: Set<String>)
+    data class ClassSupportInfo(
+        val supported: Boolean,
+        val classFilePath: String,
+        val dependencies: Set<String>
+    ) {
+        fun handle(): Result {
+            val unsupported = LinkedHashSet<String>()
+            val supported = LinkedHashSet<String>()
+            val unhandled = LinkedHashMap<String, LinkedHashSet<String>>()
+            when {
+                !this.supported -> unsupported.add(classFilePath)
+                dependencies.isEmpty() -> supported.add(classFilePath)
+                else -> dependencies.forEach { parent ->
+                    unhandled.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
+                }
+            }
+            return Result(unsupported, supported, unhandled)
+        }
+
+        data class Result(
+            val unsupported: Set<String>,
+            val supported: Set<String>,
+            val unhandled: Map<String, Set<String>>
+        )
+    }
+
 
     fun getSupportInfo(classFilePath: String, stream: InputStream): ClassSupportInfo {
         val classFilePathWithoutExtension = classFilePath.removeExtension()
@@ -33,18 +72,21 @@ class ClassVersionSupportInfoService(
             val supported = classInfo.major > 49
             val superclassName = classInfo.superclassName
             val interfaces = classInfo.interfaceNames
-            val fields = classInfo.fields.filter { it.isStatic || it.isFinal }
-                .mapNotNull { field -> getClassName(field.type) }.toSet()
-            val methods = classInfo.methods.filter { it.isStatic }
-                .flatMap { method -> listOf(method.returnType, *method.argumentTypes) }.toSet()
-                .mapNotNull { type -> getClassName(type) }
+            val fields = classInfo.fields.filter {
+                (!options.onlyStaticFields || it.isStatic) && (!options.onlyFinalFields || it.isFinal)
+            }.mapNotNull { field -> getClassName(field.type) }.toSet()
+            val methods = classInfo.methods.filter {
+                !options.onlyStaticMethods || it.isStatic
+            }.flatMap { method ->
+                listOf(method.returnType, *method.argumentTypes)
+            }.toSet().mapNotNull { type -> getClassName(type) }
 
             val dependencies = when {
                 supported -> hashSetOf<String>().apply {
-                    if (superclassName != "java.lang.Object") add(superclassName)
-                    addAll(interfaces)
-                    addAll(fields)
-                    addAll(methods)
+                    if (options.superclass && superclassName != "java.lang.Object") add(superclassName)
+                    if (options.interfaces) addAll(interfaces)
+                    if (options.fields) addAll(fields)
+                    if (options.methods) addAll(methods)
                 }
                 else -> emptySet()
             }.map { parentClassName -> parentClassName.replace(".", "/") }.toSet()

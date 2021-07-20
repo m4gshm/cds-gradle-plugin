@@ -10,19 +10,22 @@ import java.io.File
 import java.util.jar.JarFile
 
 class SupportedClassesClassificatory(
+    private val options: ClassListOptions,
     private val dryRunnerClassPath: String,
     private val classpath: FileCollection,
     private val logger: Logger,
     private val logLevel: LogLevel,
     private val classVersionSupportInfoService: ClassVersionSupportInfoService = ClassVersionSupportInfoService(
         logger,
-        logLevel
+        logLevel,
+        options
     )
 ) {
 
     fun classify(): Pair<Set<String>, Set<String>> {
 
         val unsupported = LinkedHashSet<String>()
+        val supported = LinkedHashSet<String>()
         val unhandled = LinkedHashMap<String, LinkedHashSet<String>>()
 
         classpath.map { file ->
@@ -34,7 +37,14 @@ class SupportedClassesClassificatory(
                     emptyList()
                 }
             }
-        }.flatten().forEach { it.handle(unsupported, unhandled) }
+        }.flatten().map { it.handle() }.forEach {
+            unsupported.addAll(it.unsupported)
+            supported.addAll(it.supported)
+
+            it.unhandled.forEach { (k, v) ->
+                unhandled.computeIfAbsent(k) { LinkedHashSet() }.addAll(v)
+            }
+        }
 
         var onCheckUnsupported: Collection<String> = unsupported
         do {
@@ -44,7 +54,6 @@ class SupportedClassesClassificatory(
             unsupported.addAll(onCheckUnsupported)
         } while (!onCheckUnsupported.isEmpty())
 
-        val supported = LinkedHashSet<String>()
         val supportedIt = unhandled.iterator()
         while (supportedIt.hasNext()) {
             val (className, children) = supportedIt.next()
@@ -66,18 +75,6 @@ class SupportedClassesClassificatory(
             val name = jarEntry.name
             !jarEntry.isDirectory && name.endsWith(classFileEnd) && name != dryRunnerClassPath + classFileEnd
         }.map { jarEntry -> classVersionSupportInfoService.getSupportInfo(jarFile, jarEntry) }
-    }
-
-    private fun ClassSupportInfo.handle(
-        unsupported: LinkedHashSet<String>,
-        unhandled: LinkedHashMap<String, LinkedHashSet<String>>
-    ) {
-        when {
-            !supported -> unsupported.add(classFilePath)
-            else -> dependencies.forEach { parent ->
-                unhandled.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
-            }
-        }
     }
 
     private fun initByDirClasses(directory: File): List<ClassSupportInfo> = directory.walkTopDown().filter {

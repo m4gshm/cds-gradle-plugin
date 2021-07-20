@@ -2,6 +2,7 @@ package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.util.ClassListOptions
 import com.github.m4gshm.cds.gradle.util.SupportedClassesClassificatory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -28,8 +29,8 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     )
 
     @get:Input
-    val staticClassesList: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(
-        project.extensions.getByType(CdsExtension::class.java).staticClassesList
+    val staticList: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(
+        project.extensions.getByType(CdsExtension::class.java).staticClassList
     )
 
     @get:Input
@@ -41,7 +42,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     private val dryRunnerClassPath = dryRunnerClass.replace(".", "/")
 
     @get:Input
-    val classesListExcludes: ListProperty<Regex> = objectFactory.listProperty(Regex::class.java).convention(
+    val excludes: ListProperty<Regex> = objectFactory.listProperty(Regex::class.java).convention(
         listOf(
             dryRunnerClassPath,
             ".*\\\$Proxy(\\d+)\$",
@@ -55,11 +56,17 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     val outputFile: RegularFileProperty =
         objectFactory.fileProperty().convention(buildDirectory.file(classesListFileName))
 
+    @get:Input
+    val options: Property<ClassListOptions> = objectFactory.property(ClassListOptions::class.java).convention(
+        project.extensions.getByType(CdsExtension::class.java).classListOptions
+    )
+
     init {
         val sharedClassesJar = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
         dryRunMainClass.convention(sharedClassesJar.mainClass)
         dependsOn(sharedClassesJar)
     }
+
 
     @TaskAction
     override fun exec() {
@@ -70,30 +77,31 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         val outputFile = outputFile.get().asFile
         logger.log(logLevel, "output file $outputFile")
 
+        val options = options.get()
         val (supported, unsupported) = SupportedClassesClassificatory(
-            dryRunnerClassPath, usedClasspathSources, logger, logLevel
+            options, dryRunnerClassPath, usedClasspathSources, logger, logLevel,
         ).classify()
 
-//        File("supported.txt").bufferedWriter().use { writer ->
-//            supported.forEach {
-//                writer.write(it)
-//                writer.newLine()
-//            }
-//        }
-//
-//        File("unsupported.txt").bufferedWriter().use { writer ->
-//            unsupported.forEach {
-//                writer.write(it)
-//                writer.newLine()
-//            }
-//        }
-
-        if (staticClassesList.get()) {
-            outputFile.bufferedWriter().use { writer ->
+        if (options.logSupportedClasses) buildDirectory.file("supported.txt").get().asFile.bufferedWriter()
+            .use { writer ->
                 supported.forEach {
                     writer.write(it)
                     writer.newLine()
                 }
+            }
+
+        if (options.logUnsupportedClasses) buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter()
+            .use { writer ->
+                unsupported.forEach {
+                    writer.write(it)
+                    writer.newLine()
+                }
+            }
+
+        if (staticList.get()) outputFile.bufferedWriter().use { writer ->
+            supported.forEach {
+                writer.write(it)
+                writer.newLine()
             }
         } else {
             jvmArgs(
@@ -104,7 +112,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
             super.exec()
 
             if (outputFile.exists()) {
-                val excludes = classesListExcludes.get()
+                val excludes = excludes.get()
                 val classes = outputFile.readLines()
                 var filteredClasses = classes.filter { className ->
                     val exclude = excludes.firstOrNull { excludeFilter -> excludeFilter.matches(className) } != null
