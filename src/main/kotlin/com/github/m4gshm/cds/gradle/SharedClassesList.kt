@@ -2,7 +2,7 @@ package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
-import com.github.m4gshm.cds.gradle.util.ClassListOptions
+import com.github.m4gshm.cds.gradle.util.ClassSupportInfoService
 import com.github.m4gshm.cds.gradle.util.SupportedClassesClassificatory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -79,7 +79,9 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 
         val options = options.get()
         val (supported, unsupported) = SupportedClassesClassificatory(
-            options, dryRunnerClassPath, usedClasspathSources, logger, logLevel,
+            usedClasspathSources, logger, logLevel, ClassSupportInfoService(
+                logger, logLevel, options
+            )
         ).classify()
 
         if (options.logSupportedClasses) buildDirectory.file("supported.txt").get().asFile.bufferedWriter()
@@ -129,7 +131,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                 filteredClasses = filteredClasses.filter { !unsupported.contains(it) }
 
                 logger.log(
-                    logLevel, "class amount before class version filtering $beforeVersionFiltering" +
+                    logLevel, "class amount before support checking $beforeVersionFiltering" +
                             " and after ${filteredClasses.size}"
                 )
 

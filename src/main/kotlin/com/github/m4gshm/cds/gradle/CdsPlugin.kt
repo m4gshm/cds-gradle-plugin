@@ -1,6 +1,5 @@
 package com.github.m4gshm.cds.gradle
 
-import com.github.m4gshm.cds.gradle.util.ClassListOptions
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task

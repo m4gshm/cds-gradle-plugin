@@ -1,8 +1,8 @@
 package com.github.m4gshm.cds.gradle.util
 
+import com.github.m4gshm.cds.gradle.ClassListOptions
 import com.github.m4gshm.cds.gradle.SharedClassesList
 import com.github.m4gshm.cds.gradle.SharedClassesList.Companion.classFileEnd
-import com.github.m4gshm.cds.gradle.util.ClassVersionSupportInfoService.ClassSupportInfo
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
@@ -10,16 +10,10 @@ import java.io.File
 import java.util.jar.JarFile
 
 class SupportedClassesClassificatory(
-    private val options: ClassListOptions,
-    private val dryRunnerClassPath: String,
     private val classpath: FileCollection,
     private val logger: Logger,
     private val logLevel: LogLevel,
-    private val classVersionSupportInfoService: ClassVersionSupportInfoService = ClassVersionSupportInfoService(
-        logger,
-        logLevel,
-        options
-    )
+    private val classSupportInfoService: ClassSupportInfoService
 ) {
 
     fun classify(): Pair<Set<String>, Set<String>> {
@@ -30,14 +24,14 @@ class SupportedClassesClassificatory(
 
         classpath.map { file ->
             when {
-                file.isDirectory -> initByDirClasses(file)
-                file.extension == "jar" -> initByJar(file)
+                file.isDirectory -> getDirClassesInfo(file)
+                file.extension == "jar" -> getJarInfo(file)
                 else -> {
                     logger.log(logLevel, "ignore file $file")
                     emptyList()
                 }
             }
-        }.flatten().map { it.handle() }.forEach {
+        }.flatten().forEach {
             unsupported.addAll(it.unsupported)
             supported.addAll(it.supported)
 
@@ -70,17 +64,17 @@ class SupportedClassesClassificatory(
         return supported to unsupported
     }
 
-    private fun initByJar(jar: File): List<ClassSupportInfo> = JarFile(jar).let { jarFile ->
+    private fun getJarInfo(jar: File): List<ClassSupportInfo> = JarFile(jar).let { jarFile ->
         jarFile.entries().toList().filter { jarEntry ->
             val name = jarEntry.name
-            !jarEntry.isDirectory && name.endsWith(classFileEnd) && name != dryRunnerClassPath + classFileEnd
-        }.map { jarEntry -> classVersionSupportInfoService.getSupportInfo(jarFile, jarEntry) }
+            !jarEntry.isDirectory && name.endsWith(classFileEnd)
+        }.map { jarEntry -> classSupportInfoService.getSupportInfo(jarFile, jarEntry) }
     }
 
-    private fun initByDirClasses(directory: File): List<ClassSupportInfo> = directory.walkTopDown().filter {
+    private fun getDirClassesInfo(directory: File): List<ClassSupportInfo> = directory.walkTopDown().filter {
         it.extension == SharedClassesList.classFileExtension
     }.map { classFile ->
-        classVersionSupportInfoService.getSupportInfo(
+        classSupportInfoService.getSupportInfo(
             classFile.name,
             classFile.inputStream()
         )
