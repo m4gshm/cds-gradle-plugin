@@ -14,4 +14,11 @@ data class ClassListOptions(
     var onlyStaticMethods: Boolean = true,
     var logSupportedClasses: Boolean = false,
     var logUnsupportedClasses: Boolean = false,
+    val exclude: MutableList<Regex> = listOf(
+        ".*\\\$Proxy(\\d+)\$",
+        ".*\\\$\\\$FastClassBySpringCGLIB\\\$\\\$.{0,8}\$",
+        ".*\\\$\\\$EnhancerBySpringCGLIB\\\$\\\$.{0,8}\$",
+        ".*\\\$\\\$KeyFactoryByCGLIB\\\$\\\$.{0,8}\$"
+    ).map { it.toRegex() }.toMutableList()
+
 ) : Serializable

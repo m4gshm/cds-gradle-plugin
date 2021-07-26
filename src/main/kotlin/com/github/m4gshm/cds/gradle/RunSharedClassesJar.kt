@@ -1,52 +1,62 @@
 package com.github.m4gshm.cds.gradle
 
-import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesDump
-import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.CdsPlugin.Tasks.*
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.*
 
 
-abstract class RunSharedClassesJar : JavaExec() {
+abstract class RunSharedClassesJar : JavaExec(), LogLevelAware {
     enum class Share {
         on, off, auto;
 
         val value = "-Xshare:$name"
     }
 
-    @Internal
-    var logLevel = project.extensions.getByType(CdsExtension::class.java).logLevel
+//    @Internal
+//    val logClassLoading = true
+
+    @get:Input
+    abstract val dynamicDump: Property<Boolean>
 
     @Input
     val share: Property<Share> = objectFactory.property(Share::class.java).convention(Share.on)
 
-    private val sharedClassesDumpTask = project.tasks.getByName(sharedClassesDump.taskName) as SharedClassesDump
+    @Internal
+    val sharedArchiveFileTask: Provider<SharedArchiveFileTaskSpec> = dynamicDump.map { dynamicDump ->
+        if (dynamicDump) (project.tasks.getByName(sharedClassesDynamicDump.taskName) as SharedClassesDynamicDump)
+        else (project.tasks.getByName(sharedClassesDump.taskName) as SharedClassesDump)
+    }
 
     @InputFile
-    val sharedArchiveFile: RegularFileProperty = objectFactory.fileProperty().convention(
-        sharedClassesDumpTask.sharedArchiveFile
+    val sharedArchiveFile: Provider<RegularFileProperty> = sharedArchiveFileTask.map {
+        it.sharedArchiveFile
+    }
+
+    @InputFile
+    val jar: RegularFileProperty = objectFactory.fileProperty().convention(
+        (project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar).archiveFile
     )
-
-    private val sharedClassesJarTask = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
-
-    @InputFile
-    val jar: RegularFileProperty = objectFactory.fileProperty().convention(sharedClassesJarTask.archiveFile)
 
     init {
         group = "application"
-        classpath = project.files()
-        mainClass.convention("")
+
     }
 
     @TaskAction
     override fun exec() {
-        val sharedArchiveFile = sharedArchiveFile.get().asFile
-        logger.log(logLevel, "shared archive file $sharedArchiveFile")
-        jvmArgs(
-            share.get().value,
-            "-XX:SharedArchiveFile=$sharedArchiveFile",
-            "-jar", jar.get().asFile.absolutePath
-        )
+        val sharedArchiveFile = this.sharedArchiveFile.get().asFile.get()
+        logger.log(logLevel.get(), "shared archive file $sharedArchiveFile")
+        jvmArgs(share.get().value, "-XX:SharedArchiveFile=$sharedArchiveFile")
+        if (dynamicDump.get()) {
+            logger.log(logLevel.get(), "classpath ${classpath.asPath}")
+            classpath = sharedArchiveFileTask.get().classpath
+        } else {
+            val jar = jar.get().asFile.absolutePath
+            logger.log(logLevel.get(), "jar $jar")
+            jvmArgs("-jar", jar)
+        }
         super.exec()
     }
 

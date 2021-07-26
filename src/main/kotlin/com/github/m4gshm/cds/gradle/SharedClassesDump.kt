@@ -6,22 +6,22 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
-abstract class SharedClassesDump : BaseGeneratingTask() {
+abstract class SharedClassesDump : BaseGeneratingTask(), SharedArchiveFileTaskSpec {
 
     private val sharedClassesList =
-        project.tasks.getByName(CdsPlugin.Plugins.sharedClassesList.taskName) as SharedClassesList
+        project.tasks.getByName(CdsPlugin.Tasks.sharedClassesList.taskName) as SharedClassesList
 
     @get:InputFile
-    val sharedClassListFile: RegularFileProperty = objectFactory.fileProperty().convention(sharedClassesList.outputFile)
-
-    private val sharedClassesJar =
-        project.tasks.getByName(CdsPlugin.Plugins.sharedClassesJar.taskName) as SharedClassesJar
+    val sharedClassListFile: RegularFileProperty =
+        objectFactory.fileProperty().convention(sharedClassesList.dumpLoadedClassList)
 
     @get:InputFile
-    val archiveFile: RegularFileProperty = objectFactory.fileProperty().convention(sharedClassesJar.archiveFile)
+    val archiveFile: RegularFileProperty = objectFactory.fileProperty().convention(
+        (project.tasks.getByName(CdsPlugin.Tasks.sharedClassesJar.taskName) as SharedClassesJar).archiveFile
+    )
 
     @get:OutputFile
-    val sharedArchiveFile: RegularFileProperty = objectFactory.fileProperty().convention(
+    override val sharedArchiveFile: RegularFileProperty = objectFactory.fileProperty().convention(
         buildDirectory.file(sharedClassesFileName)
     )
 
@@ -34,6 +34,7 @@ abstract class SharedClassesDump : BaseGeneratingTask() {
     @TaskAction
     override fun exec() {
 
+        val logLevel = logLevel.get()
         logger.log(logLevel, "classpath ${classpath.asPath}")
         val inputFile = sharedClassListFile.get()
         logger.log(logLevel, "input class list file $inputFile")

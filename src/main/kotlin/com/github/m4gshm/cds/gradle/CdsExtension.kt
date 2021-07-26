@@ -10,6 +10,8 @@ interface CdsExtension {
 
     var staticClassList: Boolean
 
+    var dynamicDump: Boolean
+
     var classListOptions: ClassListOptions
 
 }

@@ -1,17 +1,16 @@
 package com.github.m4gshm.cds.gradle
 
-import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
-import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.sharedClassesJar
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.dumpLoadedClassListFileName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Tasks.sharedClassesJar
 import com.github.m4gshm.cds.gradle.util.ClassSupportInfoService
 import com.github.m4gshm.cds.gradle.util.SupportedClassesClassificatory
-import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
 import java.io.BufferedWriter
-import java.io.File
-import java.util.jar.JarFile
 
 
 abstract class SharedClassesList : BaseDryRunnerTask() {
@@ -21,86 +20,67 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         const val classFileEnd: String = ".$classFileExtension"
     }
 
-    private val sharedClassesJarTask = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
-
-    @get:InputFile
-    val jar: RegularFileProperty = objectFactory.fileProperty().convention(
-        sharedClassesJarTask.archiveFile
-    )
-
     @get:Input
-    val staticList: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(
-        project.extensions.getByType(CdsExtension::class.java).staticClassList
-    )
+    abstract val staticList: Property<Boolean>
 
-    @get:Input
-    var useSourceSetClassPath = false
-
-    @get:Input
-    var sourceSetName = "main"
-
-    private val dryRunnerClassPath = dryRunnerClass.replace(".", "/")
-
-    @get:Input
-    val excludes: ListProperty<Regex> = objectFactory.listProperty(Regex::class.java).convention(
-        listOf(
-            dryRunnerClassPath,
-            ".*\\\$Proxy(\\d+)\$",
-            ".*\\\$\\\$FastClassBySpringCGLIB\\\$\\\$.{0,8}\$",
-            ".*\\\$\\\$EnhancerBySpringCGLIB\\\$\\\$.{0,8}\$",
-            ".*\\\$\\\$KeyFactoryByCGLIB\\\$\\\$.{0,8}\$"
-        ).map { it.toRegex() }
-    )
+    private val dryRunnerClassPath = dryRunnerClass.map { it.replace(".", "/") }
 
     @get:OutputFile
-    val outputFile: RegularFileProperty =
-        objectFactory.fileProperty().convention(buildDirectory.file(classesListFileName))
+    val dumpLoadedClassList: RegularFileProperty = objectFactory.fileProperty().convention(
+        buildDirectory.file(dumpLoadedClassListFileName)
+    )
 
     @get:Input
-    val options: Property<ClassListOptions> = objectFactory.property(ClassListOptions::class.java).convention(
-        project.extensions.getByType(CdsExtension::class.java).classListOptions
-    )
+    abstract val options: Property<ClassListOptions>
+
+    @get:Input
+    val excludes: ListProperty<Regex> = objectFactory.listProperty(Regex::class.java).convention(options.map {
+        it.exclude
+    })
 
     init {
         val sharedClassesJar = project.tasks.getByName(sharedClassesJar.taskName) as SharedClassesJar
         dryRunMainClass.convention(sharedClassesJar.mainClass)
+
         dependsOn(sharedClassesJar)
     }
 
-
     @TaskAction
     override fun exec() {
-        val usedClasspathSources = initClassPath()
+        addRunnerArgs()
+        super.exec()
+        val jarDependencies = getJarManifestClassPath(jar.get().asFile)
 
-        initRunner()
-
-        val outputFile = outputFile.get().asFile
-        logger.log(logLevel, "output file $outputFile")
+        val dumpLoadedClassList = dumpLoadedClassList.get().asFile
+        val logLevel = logLevel.get()
+        logger.log(logLevel, "output file $dumpLoadedClassList")
 
         val options = options.get()
+
+        logger.log(logLevel, "classes classificatory dependencies ${jarDependencies.asPath}")
         val (supported, unsupported) = SupportedClassesClassificatory(
-            usedClasspathSources, logger, logLevel, ClassSupportInfoService(
+            jarDependencies, logger, logLevel, ClassSupportInfoService(
                 logger, logLevel, options
             )
         ).classify()
 
-        if (options.logSupportedClasses) buildDirectory.file("supported.txt").get().asFile.bufferedWriter()
-            .use { writer ->
-                supported.forEach {
-                    writer.write(it)
-                    writer.newLine()
-                }
+        if (options.logSupportedClasses) buildDirectory.file("supported.txt").get().asFile.bufferedWriter(
+        ).use { writer ->
+            supported.forEach {
+                writer.write(it)
+                writer.newLine()
             }
+        }
 
-        if (options.logUnsupportedClasses) buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter()
-            .use { writer ->
-                unsupported.forEach {
-                    writer.write(it)
-                    writer.newLine()
-                }
+        if (options.logUnsupportedClasses) buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter(
+        ).use { writer ->
+            unsupported.forEach {
+                writer.write(it)
+                writer.newLine()
             }
+        }
 
-        if (staticList.get()) outputFile.bufferedWriter().use { writer ->
+        if (staticList.get()) dumpLoadedClassList.bufferedWriter().use { writer ->
             supported.forEach {
                 writer.write(it)
                 writer.newLine()
@@ -108,14 +88,15 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         } else {
             jvmArgs(
                 "-Xshare:off",
-                "-XX:DumpLoadedClassList=$outputFile"
+                "-XX:DumpLoadedClassList=$dumpLoadedClassList"
             )
 
             super.exec()
 
-            if (outputFile.exists()) {
-                val excludes = excludes.get()
-                val classes = outputFile.readLines()
+            if (dumpLoadedClassList.exists()) {
+                val excludes = excludes.get() + dryRunnerClassPath.get().toRegex()
+                logger.log(logLevel, "exclude patterns $excludes")
+                val classes = dumpLoadedClassList.readLines()
                 var filteredClasses = classes.filter { className ->
                     val exclude = excludes.firstOrNull { excludeFilter -> excludeFilter.matches(className) } != null
                     if (exclude) logger.log(logLevel, "exclude class $className")
@@ -148,39 +129,14 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 //                            " and after ${filteredClasses.size}"
 //                )
 
-                BufferedWriter(outputFile.writer()).use { writer ->
+                BufferedWriter(dumpLoadedClassList.writer()).use { writer ->
                     filteredClasses.forEach { className ->
                         writer.write(className)
                         writer.newLine()
                     }
                 }
-            } else logger.error("filtering error: $outputFile doesn't exists")
+            } else logger.error("filtering error: $dumpLoadedClassList doesn't exists")
         }
     }
 
-    private fun initClassPath(): FileCollection {
-        return if (useSourceSetClassPath) {
-            val sourceSets = project.extensions.findByName("sourceSets")
-            if (sourceSets is SourceSetContainer) {
-                val sourceSetName = this.sourceSetName
-                val sourceSet = sourceSets.findByName(sourceSetName)
-                if (sourceSet != null) {
-                    val runtimeClasspath = sourceSet.runtimeClasspath
-                    logger.log(logLevel, "set main source set's classpath by default ${runtimeClasspath.asPath}")
-                    classpath = runtimeClasspath
-                } else logger.warn("$sourceSetName sourceSet is absent")
-            } else logger.warn("sourceSets is absent")
-            classpath
-        } else {
-            val jarFile = jar.get().asFile
-            logger.log(logLevel, "put jar file to classpath, $jarFile")
-            classpath = project.files(jarFile)
-            val jarClassPath = JarFile(jarFile).manifest.mainAttributes.getValue("Class-Path")
-            if (jarClassPath != null) {
-                val parentFile = jarFile.parentFile
-                val libs = jarClassPath.split(" ").map { File(parentFile, it) }
-                classpath + project.files(libs)
-            } else classpath
-        }
-    }
 }

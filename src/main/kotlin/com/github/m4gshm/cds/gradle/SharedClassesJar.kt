@@ -3,6 +3,7 @@ package com.github.m4gshm.cds.gradle
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.buildDirName
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
@@ -28,9 +29,8 @@ abstract class SharedClassesJar : Jar() {
     @Input
     var dependenciesConfigurationName = "runtimeClasspath"
 
-    @Input
-    val mainClass = project.objects.property(String::class.java)
-        .value(project.extensions.getByType(CdsExtension::class.java).mainClass)
+    @get:Input
+    abstract val mainClass: Property<String>
 
     init {
         dependsOn("assemble")

@@ -1,10 +1,10 @@
 package com.github.m4gshm.cds.gradle
 
 
-import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.classesListFileName
+import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.dumpLoadedClassListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.pluginId
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.sharedClassesFileName
-import com.github.m4gshm.cds.gradle.CdsPlugin.Plugins.*
+import com.github.m4gshm.cds.gradle.CdsPlugin.Tasks.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPlugin
@@ -18,7 +18,7 @@ class CdsPluginTest {
     @Test
     fun testGenerateClassesListFileName() {
         val task = project().tasks.getByName(sharedClassesList.taskName) as SharedClassesList
-        assertEquals(classesListFileName, task.outputFile.get().asFile.name)
+        assertEquals(dumpLoadedClassListFileName, task.dumpLoadedClassList.get().asFile.name)
     }
 
     @Test
@@ -44,7 +44,7 @@ class CdsPluginTest {
     @Test
     fun testRunSharedClassesJarFileName() {
         val task = project().tasks.getByName(runSharedClassesJar.taskName) as RunSharedClassesJar
-        assertEquals(sharedClassesFileName, task.sharedArchiveFile.get().asFile.name)
+        assertEquals(sharedClassesFileName, task.sharedArchiveFile.get().asFile.get().name)
     }
 
 
@@ -66,6 +66,9 @@ class CdsPluginTest {
         val pluginManager = project.pluginManager
         pluginManager.apply(JavaPlugin::class.java)
         pluginManager.apply(pluginId)
+        project.extensions.getByType(CdsExtension::class.java).apply {
+            mainClass = "main.Main"
+        }
         plugins.forEach { pluginManager.apply(it) }
         return project
     }
