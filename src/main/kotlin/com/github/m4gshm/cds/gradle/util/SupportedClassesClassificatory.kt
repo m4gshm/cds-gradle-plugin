@@ -1,6 +1,5 @@
 package com.github.m4gshm.cds.gradle.util
 
-import com.github.m4gshm.cds.gradle.ClassListOptions
 import com.github.m4gshm.cds.gradle.SharedClassesList
 import com.github.m4gshm.cds.gradle.SharedClassesList.Companion.classFileEnd
 import org.gradle.api.file.FileCollection
@@ -43,7 +42,9 @@ class SupportedClassesClassificatory(
         var onCheckUnsupported: Collection<String> = unsupported
         do {
             onCheckUnsupported = onCheckUnsupported.flatMap { unsupportedClass ->
-                unhandled.remove(unsupportedClass) ?: emptyList()
+                val usedBy = unhandled.remove(unsupportedClass) ?: emptyList()
+                if (usedBy.isNotEmpty()) logger.log(logLevel, "unsupported $unsupportedClass is used by  $usedBy")
+                usedBy
             }
             unsupported.addAll(onCheckUnsupported)
         } while (!onCheckUnsupported.isEmpty())

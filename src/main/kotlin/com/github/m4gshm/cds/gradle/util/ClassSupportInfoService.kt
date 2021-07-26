@@ -1,12 +1,12 @@
 package com.github.m4gshm.cds.gradle.util
 
 import com.github.m4gshm.cds.gradle.ClassListOptions
-import com.sun.org.apache.bcel.internal.classfile.ClassFormatException
-import com.sun.org.apache.bcel.internal.classfile.ClassParser
-import com.sun.org.apache.bcel.internal.classfile.ConstantClass
-import com.sun.org.apache.bcel.internal.generic.ArrayType
-import com.sun.org.apache.bcel.internal.generic.ObjectType
-import com.sun.org.apache.bcel.internal.generic.Type
+import org.apache.bcel.classfile.ClassFormatException
+import org.apache.bcel.classfile.ClassParser
+import org.apache.bcel.classfile.ConstantClass
+import org.apache.bcel.generic.ArrayType
+import org.apache.bcel.generic.ObjectType
+import org.apache.bcel.generic.Type
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.logging.Logger
 import java.io.InputStream
@@ -38,7 +38,9 @@ class ClassSupportInfoService(
         val classFilePathWithoutExtension = classFilePath.removeExtension()
         return try {
             val classInfo = parse(stream, classFilePath)
-            val supported = classInfo.major > 49
+            val major = classInfo.major
+            val supported = major > 49
+            if (!supported) logger.log(logLevel, "class $classFilePath unsupported by version $major")
             val superclassName = classInfo.superclassName
             val interfaces = classInfo.interfaceNames
 
@@ -79,7 +81,8 @@ class ClassSupportInfoService(
         }
     }
 
-    private fun build(supported: Boolean, classFilePath: String, dependencies: Set<String>
+    private fun build(
+        supported: Boolean, classFilePath: String, dependencies: Set<String>
     ): ClassSupportInfo {
         val unsupportedClasses = LinkedHashSet<String>()
         val supportedClasses = LinkedHashSet<String>()

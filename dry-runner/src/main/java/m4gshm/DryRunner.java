@@ -9,7 +9,7 @@ import static java.lang.System.exit;
 
 public class DryRunner {
     public static void main(String[] args) throws NoSuchMethodException, ClassNotFoundException,
-            InvocationTargetException, IllegalAccessException {
+            IllegalAccessException {
         if (args.length == 0) throw new IllegalArgumentException("mainClass must be first argument");
         String mainClassName = args[0];
         String[] mainArgs = new String[args.length - 1];
@@ -21,7 +21,7 @@ public class DryRunner {
 
         try {
             mainMethod.invoke(null, new Object[]{mainArgs});
-        } catch (InvocationTargetException | IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw e;
         } catch (Exception ignored) {
         }

@@ -21,6 +21,9 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     }
 
     @get:Input
+    abstract val sort: Property<Boolean>
+
+    @get:Input
     abstract val staticList: Property<Boolean>
 
     private val dryRunnerClassPath = dryRunnerClass.map { it.replace(".", "/") }
@@ -47,12 +50,11 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 
     @TaskAction
     override fun exec() {
-        addRunnerArgs()
-        super.exec()
         val jarDependencies = getJarManifestClassPath(jar.get().asFile)
 
-        val dumpLoadedClassList = dumpLoadedClassList.get().asFile
         val logLevel = logLevel.get()
+
+        val dumpLoadedClassList = dumpLoadedClassList.get().asFile
         logger.log(logLevel, "output file $dumpLoadedClassList")
 
         val options = options.get()
@@ -64,19 +66,23 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
             )
         ).classify()
 
-        if (options.logSupportedClasses) buildDirectory.file("supported.txt").get().asFile.bufferedWriter(
-        ).use { writer ->
-            supported.forEach {
-                writer.write(it)
-                writer.newLine()
+        if (options.logSupportedClasses) {
+            mkBuildDir()
+            buildDirectory.file("supported.txt").get().asFile.bufferedWriter().use { writer ->
+                supported.forEach {
+                    writer.write(it)
+                    writer.newLine()
+                }
             }
         }
 
-        if (options.logUnsupportedClasses) buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter(
-        ).use { writer ->
-            unsupported.forEach {
-                writer.write(it)
-                writer.newLine()
+        if (options.logUnsupportedClasses) {
+            mkBuildDir()
+            buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter().use { writer ->
+                unsupported.forEach {
+                    writer.write(it)
+                    writer.newLine()
+                }
             }
         }
 
@@ -86,6 +92,9 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                 writer.newLine()
             }
         } else {
+            unpackRunner()
+            addRunnerArgs()
+
             jvmArgs(
                 "-Xshare:off",
                 "-XX:DumpLoadedClassList=$dumpLoadedClassList"
@@ -96,7 +105,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
             if (dumpLoadedClassList.exists()) {
                 val excludes = excludes.get() + dryRunnerClassPath.get().toRegex()
                 logger.log(logLevel, "exclude patterns $excludes")
-                val classes = dumpLoadedClassList.readLines()
+                val classes = LinkedHashSet(dumpLoadedClassList.readLines())
                 var filteredClasses = classes.filter { className ->
                     val exclude = excludes.firstOrNull { excludeFilter -> excludeFilter.matches(className) } != null
                     if (exclude) logger.log(logLevel, "exclude class $className")
@@ -129,6 +138,8 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 //                            " and after ${filteredClasses.size}"
 //                )
 
+                if (this.sort.orElse(false).get()) filteredClasses = filteredClasses.sorted()
+
                 BufferedWriter(dumpLoadedClassList.writer()).use { writer ->
                     filteredClasses.forEach { className ->
                         writer.write(className)
@@ -137,6 +148,11 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                 }
             } else logger.error("filtering error: $dumpLoadedClassList doesn't exists")
         }
+    }
+
+    private fun mkBuildDir() {
+        val dir = buildDirectory.get().asFile
+        if (!dir.exists()) dir.mkdirs()
     }
 
 }

@@ -23,7 +23,6 @@ abstract class SharedClassesDynamicDump : BaseDryRunnerTask(), SharedArchiveFile
 
     @TaskAction
     override fun exec() {
-        unpackRunner()
         val minVersion = JavaVersion.VERSION_13
         val javaVersion = JavaVersion.current()
         val java13Compatible = javaVersion.isCompatibleWith(minVersion)
@@ -43,6 +42,7 @@ abstract class SharedClassesDynamicDump : BaseDryRunnerTask(), SharedArchiveFile
             "-XX:ArchiveClassesAtExit=$outputFile",
             "-XX:DumpLoadedClassList=$dumpLoadedClassList"
         )
+        unpackRunner()
         addRunnerArgs()
         super.exec()
     }

@@ -7,6 +7,7 @@ import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.sharedClassesFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Tasks.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.Test
@@ -14,7 +15,22 @@ import java.nio.file.Paths
 import kotlin.test.assertEquals
 
 
-class CdsPluginTest {
+class OutputFileNameTest {
+    companion object {
+        fun project(vararg plugins: Class<out Plugin<*>>): Project {
+            val project = ProjectBuilder.builder().build()
+            val pluginManager = project.pluginManager
+            pluginManager.apply(JavaPlugin::class.java)
+            pluginManager.apply(pluginId)
+            project.extensions.getByType(CdsExtension::class.java).apply {
+                logLevel = LogLevel.WARN
+                mainClass = "com.github.m4gshm.cds.test.Main"
+            }
+            plugins.forEach { pluginManager.apply(it) }
+            return project
+        }
+    }
+
     @Test
     fun testGenerateClassesListFileName() {
         val task = project().tasks.getByName(sharedClassesList.taskName) as SharedClassesList
@@ -47,29 +63,4 @@ class CdsPluginTest {
         assertEquals(sharedClassesFileName, task.sharedArchiveFile.get().asFile.get().name)
     }
 
-
-//    @Test
-//    fun sharedClassesDynamicDumpMainClassName() {
-//        val project = project()
-//
-//        val task = project.tasks.getByName(sharedClassesDynamicDump.taskName) as SharedClassesDynamicDump
-//        val jar = project.tasks.getByName("jar") as Jar
-//        jar.manifest.attributes["Main-Class"] = "app.Main"
-//        task.jar.set(jar.archiveFile.get().asFile)
-//        val dryRunMainClass = task.dryRunMainClass
-//        val dryRunMainClassName = dryRunMainClass.get()
-//        assertEquals("app.Main", dryRunMainClassName)
-//    }
-
-    private fun project(vararg plugins: Class<out Plugin<*>>): Project {
-        val project = ProjectBuilder.builder().build()
-        val pluginManager = project.pluginManager
-        pluginManager.apply(JavaPlugin::class.java)
-        pluginManager.apply(pluginId)
-        project.extensions.getByType(CdsExtension::class.java).apply {
-            mainClass = "main.Main"
-        }
-        plugins.forEach { pluginManager.apply(it) }
-        return project
-    }
 }

@@ -5,7 +5,10 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.SourceSetContainer
 import java.io.File
 import java.util.jar.JarFile
 
@@ -38,7 +41,6 @@ abstract class BaseDryRunnerTask : BaseGeneratingTask() {
 
     init {
         group = CdsPlugin.group
-        isIgnoreExitValue = true
         mainClass.convention(dryRunnerClass)
     }
 
@@ -53,14 +55,20 @@ abstract class BaseDryRunnerTask : BaseGeneratingTask() {
 
     protected fun unpackRunner() {
         val classPathRunner = "/META-INF/$runnerJar"
-        val resource =
-            javaClass.getResource(classPathRunner) ?: throw IllegalStateException("$classPathRunner is absent")
+        val resource = javaClass.getResource(classPathRunner)
+            ?: throw IllegalStateException("$classPathRunner is absent")
 
         val logLevel = logLevel.get()
         logger.log(logLevel, "runner url $resource")
 
         val runnerJarOutputFile = runnerJarOutputFile.get().asFile
+        val parentDir = runnerJarOutputFile.parentFile
+        if (!parentDir.exists()) {
+            val mkdirs = parentDir.mkdirs()
+            if (!mkdirs && !parentDir.exists()) logger.error("cannot create directory $parentDir")
+        }
         logger.log(logLevel, "copying runner to $runnerJarOutputFile")
+
         resource.openStream().copyTo(runnerJarOutputFile.outputStream())
     }
 
@@ -78,15 +86,10 @@ abstract class BaseDryRunnerTask : BaseGeneratingTask() {
             val sourceSet = sourceSets.findByName(sourceSetName)
             if (sourceSet != null) {
                 val runtimeClasspath = sourceSet.runtimeClasspath
-//                logger.log(logLevel.get(), "set main source set's classpath by default ${runtimeClasspath.asPath}")
                 classpath = runtimeClasspath
             } else logger.warn("$sourceSetName sourceSet is absent")
         } else logger.warn("sourceSets is absent")
-    } else {
-        val jarFile = jar.get().asFile
-//        logger.log(logLevel.get(), "put jar file to classpath, $jarFile")
-        classpath = project.files(jarFile)
-    }
+    } else classpath = project.files(jar)
 
     protected fun getJarManifestClassPath(jarFile: File): FileCollection = project.files(jarFile) + (JarFile(
         jarFile

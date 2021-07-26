@@ -17,6 +17,8 @@ repositories {
 
 val dryRunner = ":dry-runner"
 dependencies {
+    api("org.apache.bcel:bcel:6.5.0")
+
     compileOnly(project(dryRunner))
     compileOnly(gradleApi())
     compileOnly("org.springframework.boot:spring-boot-gradle-plugin:2.3.10.RELEASE")
@@ -25,14 +27,21 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
     testImplementation(gradleApi())
+    testImplementation(project(":test-app"))
 }
 
 tasks.test {
+    dependsOn(":test-app:jar")
     useJUnit()
+
+    val jar = tasks.findByPath("test-app:jar") as Jar
+    val file = jar.archiveFile.get().asFile
+    jvmArgs("-Dcds.test.jar=$file")
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
     withSourcesJar()
 }
 

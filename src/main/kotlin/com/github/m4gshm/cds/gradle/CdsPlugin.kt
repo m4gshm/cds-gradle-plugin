@@ -43,9 +43,9 @@ class CdsPlugin : Plugin<Project> {
         runSharedClassesJar(RunSharedClassesJar::class.java) {
             override fun config(cds: CdsExtension, task: Task) {
                 super.config(cds, task)
-                if (task is RunSharedClassesJar) {
-                    task.mainClass.set(cds.mainClass)
-                    task.dynamicDump.set(cds.dynamicDump)
+                if (task is RunSharedClassesJar) task.apply {
+                    mainClass.set(cds.mainClass)
+                    dynamicDump.set(cds.dynamicDump)
                 }
             }
         },
