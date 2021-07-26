@@ -69,7 +69,7 @@ class CdsPlugin : Plugin<Project> {
         val cdsExtension = project.extensions.create(extension, CdsExtension::class.java).apply {
             logLevel = LogLevel.DEBUG
             staticClassList = false
-            dynamicDump = true
+            dynamicDump = false
             classListOptions = ClassListOptions()
         }
 

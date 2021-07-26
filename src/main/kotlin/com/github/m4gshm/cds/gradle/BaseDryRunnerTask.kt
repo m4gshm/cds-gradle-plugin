@@ -78,13 +78,13 @@ abstract class BaseDryRunnerTask : BaseGeneratingTask() {
             val sourceSet = sourceSets.findByName(sourceSetName)
             if (sourceSet != null) {
                 val runtimeClasspath = sourceSet.runtimeClasspath
-                logger.log(logLevel.get(), "set main source set's classpath by default ${runtimeClasspath.asPath}")
+//                logger.log(logLevel.get(), "set main source set's classpath by default ${runtimeClasspath.asPath}")
                 classpath = runtimeClasspath
             } else logger.warn("$sourceSetName sourceSet is absent")
         } else logger.warn("sourceSets is absent")
     } else {
         val jarFile = jar.get().asFile
-        logger.log(logLevel.get(), "put jar file to classpath, $jarFile")
+//        logger.log(logLevel.get(), "put jar file to classpath, $jarFile")
         classpath = project.files(jarFile)
     }
 
