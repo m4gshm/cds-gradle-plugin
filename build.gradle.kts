@@ -45,8 +45,12 @@ java {
     withSourcesJar()
 }
 
+tasks.compileTestJava {
+    targetCompatibility = JavaVersion.VERSION_11.majorVersion
+}
+
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
 
 tasks.withType<JavaCompile> {

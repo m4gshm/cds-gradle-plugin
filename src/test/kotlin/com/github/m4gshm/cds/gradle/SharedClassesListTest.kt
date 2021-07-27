@@ -10,6 +10,13 @@ import java.util.Objects.requireNonNull
 class SharedClassesListTest {
     @Test
     fun testGenerateClassesListFile() {
+        val version = Runtime.version()
+        val supportedVersion = 11
+        val currentVer = version.feature()
+        assertTrue(
+            "java version must be equals or great then $supportedVersion, current $currentVer",
+            currentVer >= supportedVersion
+        )
         val jarProperty = "cds.test.jar"
         val jarFilePath = requireNonNull(System.getProperty(jarProperty), "$jarProperty file is absent")
 
@@ -17,8 +24,6 @@ class SharedClassesListTest {
         assertTrue("file not exists, $file", file.exists())
 
         val task = project().tasks.getByName(CdsPlugin.Tasks.sharedClassesList.taskName) as SharedClassesList
-        task.standardOutput = System.out
-        task.errorOutput = System.out
         task.options.get().apply {
             logSupportedClasses = true
             logUnsupportedClasses = true
