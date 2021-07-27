@@ -6,11 +6,11 @@
 
 ````kotlin
 plugins {
-    id("com.github.m4gshm.cds") version "0.0.1"
+    id("com.github.m4gshm.cds") version "0.0.2"
 }
 
 cds {
-    mainClass.set("app.Main")
+    mainClass = "app.Main"
 }
 
 ````
