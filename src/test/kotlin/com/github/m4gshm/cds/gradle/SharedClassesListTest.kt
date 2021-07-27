@@ -8,14 +8,19 @@ import java.io.File
 import java.util.Objects.requireNonNull
 
 class SharedClassesListTest {
+
+    private fun getVersion() = System.getProperty("java.version").let {
+        val dot = it.indexOf(".")
+        if (dot != -1) it.substring(0, dot) else it
+    }.toInt()
+
     @Test
     fun testGenerateClassesListFile() {
-        val version = Runtime.version()
         val supportedVersion = 11
-        val currentVer = version.feature()
+        val currentVersion = getVersion()
         assertTrue(
-            "java version must be equals or great then $supportedVersion, current $currentVer",
-            currentVer >= supportedVersion
+            "java version must be equals or great then $supportedVersion, current $currentVersion",
+            currentVersion >= supportedVersion
         )
         val jarProperty = "cds.test.jar"
         val jarFilePath = requireNonNull(System.getProperty(jarProperty), "$jarProperty file is absent")

@@ -20,13 +20,10 @@ dependencies {
     api("org.apache.bcel:bcel:6.5.0")
 
     compileOnly(project(dryRunner))
-    compileOnly(gradleApi())
-    compileOnly("org.springframework.boot:spring-boot-gradle-plugin:2.3.10.RELEASE")
 
-
+    testImplementation(gradleApi())
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
-    testImplementation(gradleApi())
     testImplementation(project(":test-app"))
 }
 
@@ -45,12 +42,8 @@ java {
     withSourcesJar()
 }
 
-tasks.compileTestJava {
-    targetCompatibility = JavaVersion.VERSION_11.majorVersion
-}
-
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+    kotlinOptions.jvmTarget = "1.8"
 }
 
 tasks.withType<JavaCompile> {
@@ -58,6 +51,14 @@ tasks.withType<JavaCompile> {
         encoding = "UTF-8"
         debugOptions.debugLevel = "source,lines,vars"
     }
+}
+
+tasks.test {
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(13))
+        }
+    )
 }
 
 gradlePlugin {
