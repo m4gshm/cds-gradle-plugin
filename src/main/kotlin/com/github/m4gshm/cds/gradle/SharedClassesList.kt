@@ -21,7 +21,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     }
 
     @get:Input
-    val sort: Property<Boolean> = objectFactory.property<Boolean>(Boolean::class.java).convention(true)
+    val sort: Property<Boolean> = objectFactory.property<Boolean>(Boolean::class.java).convention(false)
 
     @get:Input
     abstract val staticList: Property<Boolean>
