@@ -21,7 +21,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     }
 
     @get:Input
-    abstract val sort: Property<Boolean>
+    val sort: Property<Boolean> = objectFactory.property<Boolean>(Boolean::class.java).convention(true)
 
     @get:Input
     abstract val staticList: Property<Boolean>
@@ -138,7 +138,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 //                            " and after ${filteredClasses.size}"
 //                )
 
-                if (this.sort.orElse(false).get()) filteredClasses = filteredClasses.sorted()
+                if (this.sort.get()) filteredClasses = filteredClasses.sorted()
 
                 BufferedWriter(dumpLoadedClassList.writer()).use { writer ->
                     filteredClasses.forEach { className ->

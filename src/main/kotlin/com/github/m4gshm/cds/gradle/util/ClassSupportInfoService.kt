@@ -48,7 +48,7 @@ class ClassSupportInfoService(
                 (0 until constantPool.length).asSequence().map { constantPool.getConstant(it) }.mapNotNull {
                     (it as? ConstantClass)?.getConstantValue(constantPool)
                 }.filterIsInstance<String>().filter { className ->
-                    className != "java/lang/Object"
+                    !(className == "java/lang/Object" || className == classFilePathWithoutExtension)
                 }.toSet()
             } else emptySet()
 
@@ -87,12 +87,10 @@ class ClassSupportInfoService(
         val unsupportedClasses = LinkedHashSet<String>()
         val supportedClasses = LinkedHashSet<String>()
         val unhandledClasses = LinkedHashMap<String, LinkedHashSet<String>>()
-        when {
-            !supported -> unsupportedClasses.add(classFilePath)
-            dependencies.isEmpty() -> supportedClasses.add(classFilePath)
-            else -> dependencies.forEach { parent ->
-                unhandledClasses.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
-            }
+        if (!supported) unsupportedClasses.add(classFilePath)
+        else if (dependencies.isEmpty()) supportedClasses.add(classFilePath)
+        else dependencies.forEach { parent ->
+            unhandledClasses.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
         }
         return ClassSupportInfo(unsupportedClasses, supportedClasses, unhandledClasses)
     }

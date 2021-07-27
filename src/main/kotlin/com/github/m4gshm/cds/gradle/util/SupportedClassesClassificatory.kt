@@ -43,7 +43,7 @@ class SupportedClassesClassificatory(
         do {
             onCheckUnsupported = onCheckUnsupported.flatMap { unsupportedClass ->
                 val usedBy = unhandled.remove(unsupportedClass) ?: emptyList()
-                if (usedBy.isNotEmpty()) logger.log(logLevel, "unsupported $unsupportedClass is used by  $usedBy")
+                if (usedBy.isNotEmpty()) logger.log(logLevel, "unsupported $unsupportedClass is used by $usedBy")
                 usedBy
             }
             unsupported.addAll(onCheckUnsupported)
