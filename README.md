@@ -19,7 +19,7 @@ Replace ```mainClass``` value by your main class and execute the next command:
 ./gradlew runSharedClassesJar
 ````
 
-#Build docker image example
+# Build docker image example
 
 **build.gradle.kts**
 
