@@ -19,6 +19,10 @@ class ClassSupportInfoService(
     private val options: ClassListOptions
 ) {
 
+    companion object {
+        private const val arrayPrefix = '['
+    }
+
     fun getSupportInfo(jarFile: JarFile, jarEntry: ZipEntry): ClassSupportInfo {
         val classFilePath = jarEntry.name
         return if (options.checkSigned && isSigned(jarFile, classFilePath)) {
@@ -49,7 +53,24 @@ class ClassSupportInfoService(
                     (it as? ConstantClass)?.getConstantValue(constantPool)
                 }.filterIsInstance<String>().filter { className ->
                     !(className == "java/lang/Object" || className == classFilePathWithoutExtension)
-                }.toSet()
+                }.map {
+                    when {
+                        it.startsWith(arrayPrefix) -> {
+                            var start = 1
+                            for (i in start until it.length) {
+                                if (it[i] != arrayPrefix) break
+                                start = i
+                            }
+
+                            if (isPrimitiveArray(it, start)) "" else {
+                                start++
+                                val end = if (it[it.length - 1] == ';') it.length - 1 else it.length
+                                it.substring(start, end)
+                            }
+                        }
+                        else -> it
+                    }
+                }.filter { it.isNotBlank() }.toSet()
             } else emptySet()
 
             val fields = if (options.fields) classInfo.fields.filter {
@@ -81,6 +102,9 @@ class ClassSupportInfoService(
         }
     }
 
+    private fun isPrimitiveArray(className: String, arrayPrefixStart: Int) =
+        className.length - arrayPrefixStart == 1
+
     private fun build(
         supported: Boolean, classFilePath: String, dependencies: Set<String>
     ): ClassSupportInfo {
@@ -92,7 +116,7 @@ class ClassSupportInfoService(
         else dependencies.forEach { parent ->
             unhandledClasses.computeIfAbsent(parent) { LinkedHashSet() }.add(classFilePath)
         }
-        return ClassSupportInfo(unsupportedClasses, supportedClasses, unhandledClasses)
+        return ClassSupportInfo(classFilePath, unsupportedClasses, supportedClasses, unhandledClasses)
     }
 
     private fun getClassName(type: Type): String? = when (type) {

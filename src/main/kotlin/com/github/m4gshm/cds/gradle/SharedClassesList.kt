@@ -87,7 +87,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         }
 
         if (staticList.get()) dumpLoadedClassList.bufferedWriter().use { writer ->
-            supported.forEach {
+            (if (sort.get()) supported.sorted() else supported).forEach {
                 writer.write(it)
                 writer.newLine()
             }

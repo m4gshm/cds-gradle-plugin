@@ -19,6 +19,7 @@ class SupportedClassesClassificatory(
 
         val unsupported = LinkedHashSet<String>()
         val supported = LinkedHashSet<String>()
+        val found = LinkedHashSet<String>()
         val unhandled = LinkedHashMap<String, LinkedHashSet<String>>()
 
         classpath.map { file ->
@@ -31,6 +32,7 @@ class SupportedClassesClassificatory(
                 }
             }
         }.flatten().forEach {
+            found.add(it.classFilePath)
             unsupported.addAll(it.unsupported)
             supported.addAll(it.supported)
 
@@ -62,7 +64,11 @@ class SupportedClassesClassificatory(
         assert(unhandled.isEmpty()) { "unhandled thees is not empty $unhandled" }
 
         logger.log(logLevel, "amounts of classes: supported ${supported.size}, unsupported ${unsupported.size}")
-        return supported to unsupported
+
+        val foundSupported = supported.filter { found.contains(it) }.toSet()
+        logger.log(logLevel, "amounts of found supported ${foundSupported.size}")
+
+        return foundSupported to unsupported
     }
 
     private fun getJarInfo(jar: File): List<ClassSupportInfo> = JarFile(jar).let { jarFile ->
