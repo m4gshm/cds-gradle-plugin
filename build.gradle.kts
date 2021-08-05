@@ -75,7 +75,7 @@ gradlePlugin {
 pluginBundle {
     website = "https://github.com/m4gshm/cds-gradle-plugin"
     vcsUrl = "https://github.com/m4gshm/cds-gradle-plugin"
-    tags = listOf("cds", "jsa")
+    tags = listOf("cds", "jsa", "class Data sharing")
 }
 
 publishing {

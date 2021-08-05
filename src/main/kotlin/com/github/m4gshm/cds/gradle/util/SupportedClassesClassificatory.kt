@@ -63,10 +63,9 @@ class SupportedClassesClassificatory(
 
         assert(unhandled.isEmpty()) { "unhandled thees is not empty $unhandled" }
 
-        logger.log(logLevel, "amounts of classes: supported ${supported.size}, unsupported ${unsupported.size}")
-
         val foundSupported = supported.filter { found.contains(it) }.toSet()
-        logger.log(logLevel, "amounts of found supported ${foundSupported.size}")
+        logger.log(logLevel, "amounts of classes: supported ${supported.size} (found ${foundSupported.size})," +
+                " unsupported ${unsupported.size}")
 
         return foundSupported to unsupported
     }
