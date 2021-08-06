@@ -22,9 +22,9 @@ abstract class SharedClassesJar : Jar() {
     var libsDirName = "lib"
 
     @OutputDirectory
-    val libsDir: DirectoryProperty = project.objects.directoryProperty().fileProvider(archiveFile.map {
-        it.asFile.parentFile.toPath().resolve(libsDirName).toFile()
-    })
+    val libsDir: DirectoryProperty = project.objects.directoryProperty().convention(
+        destinationDirectory.map { it.dir(libsDirName) }
+    )
 
     @Input
     var dependenciesConfigurationName = "runtimeClasspath"
