@@ -3,6 +3,9 @@ package com.github.m4gshm.cds.gradle
 import java.io.Serializable
 
 data class ClassListOptions(
+    var supportedOnlyFound: Boolean = true,
+    var filterBySupported: Boolean = true,
+    var includeJreClasses: Boolean = true,
     var checkSigned: Boolean = true,
     var analyzeConstantPool: Boolean = true,
     var superclass: Boolean = false,
@@ -20,5 +23,4 @@ data class ClassListOptions(
         ".*\\\$\\\$EnhancerBySpringCGLIB\\\$\\\$.{0,8}\$",
         ".*\\\$\\\$KeyFactoryByCGLIB\\\$\\\$.{0,8}\$"
     ).map { it.toRegex() }.toMutableList()
-
 ) : Serializable

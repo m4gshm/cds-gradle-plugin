@@ -30,6 +30,7 @@ class SharedClassesListTest {
 
         val task = project().tasks.getByName(CdsPlugin.Tasks.sharedClassesList.taskName) as SharedClassesList
         task.options.get().apply {
+            includeJreClasses = true
             logSupportedClasses = true
             logUnsupportedClasses = true
         }

@@ -2,9 +2,12 @@ package com.github.m4gshm.cds.gradle
 
 import com.github.m4gshm.cds.gradle.CdsPlugin.Companion.dumpLoadedClassListFileName
 import com.github.m4gshm.cds.gradle.CdsPlugin.Tasks.sharedClassesJar
+import com.github.m4gshm.cds.gradle.util.BaseClassesSupportClassifier.ClassifierResult
+import com.github.m4gshm.cds.gradle.util.ClassPathClassesSupportClassifier
 import com.github.m4gshm.cds.gradle.util.ClassSupportInfoService
-import com.github.m4gshm.cds.gradle.util.SupportedClassesClassificatory
+import com.github.m4gshm.cds.gradle.util.JreClassesSupportClassifier
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.logging.LogLevel.INFO
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
@@ -21,7 +24,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
     }
 
     @get:Input
-    val sort: Property<Boolean> = objectFactory.property<Boolean>(Boolean::class.java).convention(false)
+    val sort: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(false)
 
     @get:Input
     abstract val staticList: Property<Boolean>
@@ -59,17 +62,36 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
 
         val options = options.get()
 
+        val classSupportInfoService = ClassSupportInfoService(logger, logLevel, options)
         logger.log(logLevel, "classes classificatory dependencies ${jarDependencies.asPath}")
-        val (supported, unsupported) = SupportedClassesClassificatory(
-            jarDependencies, logger, logLevel, ClassSupportInfoService(
-                logger, logLevel, options
-            )
+
+        val (cpSupported, cpFound, cpUnsupported) = ClassPathClassesSupportClassifier(
+            logger, logLevel, jarDependencies, classSupportInfoService
         ).classify()
+
+        val includeJreClasses = options.includeJreClasses
+        val (jreSupported, jreFound, jreUnsupported) = when {
+            includeJreClasses -> JreClassesSupportClassifier(logger, logLevel, classSupportInfoService).classify()
+            else -> ClassifierResult(emptySet(), emptySet(), emptySet())
+        }
+
+        val unsupported = jreUnsupported + cpUnsupported
+        val found = jreFound + cpFound
+
+        val supported = (jreSupported + cpSupported).let {
+            if (options.supportedOnlyFound) it.filter { className -> found.contains(className) }.toSet()
+            else it
+        }
+
+        logger.log(
+            logLevel, "amounts of classified classes: supported ${supported.size}," +
+                    " found ${found.size}, unsupported ${unsupported.size}"
+        )
 
         if (options.logSupportedClasses) {
             mkBuildDir()
             buildDirectory.file("supported.txt").get().asFile.bufferedWriter().use { writer ->
-                supported.forEach {
+                supported.sorted().forEach {
                     writer.write(it)
                     writer.newLine()
                 }
@@ -79,7 +101,7 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
         if (options.logUnsupportedClasses) {
             mkBuildDir()
             buildDirectory.file("unsupported.txt").get().asFile.bufferedWriter().use { writer ->
-                unsupported.forEach {
+                unsupported.sorted().forEach {
                     writer.write(it)
                     writer.newLine()
                 }
@@ -118,25 +140,18 @@ abstract class SharedClassesList : BaseDryRunnerTask() {
                 )
 
                 val beforeVersionFiltering = filteredClasses.size
-                filteredClasses = filteredClasses.filter { !unsupported.contains(it) }
+                filteredClasses = filteredClasses.filter { className ->
+                    !unsupported.contains(className)
+                }
+
+                if (options.filterBySupported) filteredClasses = filteredClasses.filter { className ->
+                    supported.contains(className)
+                }
 
                 logger.log(
-                    logLevel, "class amount before support checking $beforeVersionFiltering" +
-                            " and after ${filteredClasses.size}"
+                    if (logLevel > INFO) logLevel else INFO,
+                    "class amount before support checking $beforeVersionFiltering and after ${filteredClasses.size}"
                 )
-
-//                val beforeFoundFiltering = filteredClasses.size
-//                filteredClasses = filteredClasses.filter {
-//                    val contains = supported.contains(it)
-//                    if (!contains) logger.log(
-//                        logLevel, "class is listed but not found in classpath $it"
-//                    )
-//                    contains
-//                }
-//                logger.log(
-//                    logLevel, "class amount before class found filtering $beforeFoundFiltering" +
-//                            " and after ${filteredClasses.size}"
-//                )
 
                 if (this.sort.get()) filteredClasses = filteredClasses.sorted()
 
