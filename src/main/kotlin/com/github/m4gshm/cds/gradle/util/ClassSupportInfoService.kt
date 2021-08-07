@@ -27,7 +27,7 @@ class ClassSupportInfoService(
         val classFilePath = jarEntry.name
         return if (options.checkSigned && isSigned(jarFile, classFilePath)) {
             logger.log(logLevel, "unsupported signed class $classFilePath ${jarFile.name}")
-            build(false, classFilePath, emptySet())
+            build(false, classFilePath.removeExtension(), emptySet())
         } else getSupportInfo(
             classFilePath, jarFile.getInputStream(jarEntry)
         )
