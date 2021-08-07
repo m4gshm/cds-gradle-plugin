@@ -25,11 +25,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - name: Build with Gradle
         run: ./gradlew build
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Package
-          path: build/libs
-      - name: Cleanup Gradle Cache
+§§      - name: Cleanup Gradle Cache
         run: |
           rm -f ~/.gradle/caches/modules-2/modules-2.lock
           rm -f ~/.gradle/caches/modules-2/gc.properties
