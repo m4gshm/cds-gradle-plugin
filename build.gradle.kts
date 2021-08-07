@@ -54,11 +54,11 @@ tasks.withType<JavaCompile> {
 }
 
 tasks.test {
-//    javaLauncher.set(
-//        javaToolchains.launcherFor {
-//            languageVersion.set(JavaLanguageVersion.of(13))
-//        }
-//    )
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(13))
+        }
+    )
 }
 
 gradlePlugin {
