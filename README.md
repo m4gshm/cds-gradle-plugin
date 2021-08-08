@@ -6,7 +6,7 @@
 
 ````kotlin
 plugins {
-    id("com.github.m4gshm.cds") version "0.0.2"
+    id("com.github.m4gshm.cds") version "0.0.3"
 }
 
 cds {
@@ -26,7 +26,7 @@ Replace ```mainClass``` value by your main class and execute the next command:
 ```kotlin
 plugins {
     id("com.bmuschko.docker-java-application") version "7.1.0"
-    id("com.github.m4gshm.cds") version "0.0.2"
+    id("com.github.m4gshm.cds") version "0.0.3"
 }
 
 cds {
